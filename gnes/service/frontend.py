@@ -41,7 +41,7 @@ class FrontendService:
 
     def __enter__(self):
         self.server.start()
-        self.logger.critical('listening at: %s' % self.bind_address)
+        self.logger.critical(f'listening at: {self.bind_address}')
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -82,7 +82,7 @@ class FrontendService:
             resp.request_id = m.envelope.request_id
             m.envelope.routes[0].end_time.GetCurrentTime()
             if self.args.route_table:
-                self.logger.info('route: %s' % router2str(m))
+                self.logger.info(f'route: {router2str(m)}')
                 self.logger.info('route table: \n%s' % make_route_table(m.envelope.routes, include_frontend=True))
             if self.args.dump_route:
                 self.args.dump_route.write(MessageToJson(m.envelope, indent=0).replace('\n', '') + '\n')

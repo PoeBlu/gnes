@@ -23,7 +23,7 @@ class DummyServer:
 
     def __enter__(self):
         self.server.start()
-        print('dummy server is listening at: %s' % self.bind_address)
+        print(f'dummy server is listening at: {self.bind_address}')
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -32,7 +32,7 @@ class DummyServer:
     class GNESServicer(dummy_pb2_grpc.DummyGRPCServiceServicer):
 
         def dummyAPI(self, request, context):
-            print('the dummy server received something: %s' % request)
+            print(f'the dummy server received something: {request}')
             return request
 
 
@@ -67,11 +67,9 @@ class TestGRPCService(unittest.TestCase):
     def test_grpc_real_service(self):
         # to fix
 
-        with DummyServer('%s:%d' % (self.s_args.grpc_host, self.s_args.grpc_port)), GRPCService(
-                self.s_args), FrontendService(self.args), grpc.insecure_channel(
-            '%s:%s' % (self.args.grpc_host, self.args.grpc_port),
-            options=[('grpc.max_send_message_length', 70 * 1024 * 1024),
-                     ('grpc.max_receive_message_length', 70 * 1024 * 1024)]) as channel:
+        with (DummyServer('%s:%d' % (self.s_args.grpc_host, self.s_args.grpc_port)), GRPCService(
+                    self.s_args), FrontendService(self.args), grpc.insecure_channel(f'{self.args.grpc_host}:{self.args.grpc_port}', options=[('grpc.max_send_message_length', 70 * 1024 * 1024),
+                         ('grpc.max_receive_message_length', 70 * 1024 * 1024)]) as channel):
             stub = gnes_pb2_grpc.GnesRPCStub(channel)
             resp = stub.Call(list(RequestGenerator.query(b'abc', 1))[0])
             self.assertEqual(resp.request_id, 0)  # idx start with 0, but +1 for final FLUSH

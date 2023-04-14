@@ -42,7 +42,11 @@ class RequestGenerator:
             req.request_id = request_id_start
             for raw_bytes in pi:
                 d = req.index.docs.add()
-                d.doc_id = doc_id_start if not random_doc_id else random.randint(0, ctypes.c_uint(-1).value)
+                d.doc_id = (
+                    random.randint(0, ctypes.c_uint(-1).value)
+                    if random_doc_id
+                    else doc_id_start
+                )
                 d.raw_bytes = raw_bytes
                 d.weight = 1.0
                 d.doc_type = doc_type
@@ -60,7 +64,11 @@ class RequestGenerator:
             req.request_id = request_id_start
             for raw_bytes in pi:
                 d = req.train.docs.add()
-                d.doc_id = doc_id_start if not random_doc_id else random.randint(0, ctypes.c_uint(-1).value)
+                d.doc_id = (
+                    random.randint(0, ctypes.c_uint(-1).value)
+                    if random_doc_id
+                    else doc_id_start
+                )
                 d.raw_bytes = raw_bytes
                 d.doc_type = doc_type
                 if not random_doc_id:

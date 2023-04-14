@@ -41,7 +41,7 @@ class YouTube8MEncoder(BaseVideoEncoder):
         with g.as_default():
             checkpoint_file = os.path.join(self.model_dir, self.model_name,
                                            "inference_model")
-            meta_graph_location = checkpoint_file + ".meta"
+            meta_graph_location = f"{checkpoint_file}.meta"
             saver = tf.train.import_meta_graph(meta_graph_location, clear_devices=True)
 
             config = tf.ConfigProto(log_device_placement=False)

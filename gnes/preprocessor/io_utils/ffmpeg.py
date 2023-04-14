@@ -36,14 +36,14 @@ def parse_media_details(infos):
     codec, pix_fmt, res_width, res_height, fps = video_info_match.group(
         2, 3, 4, 5, 6)
 
-    audio_tracks = list()
+    audio_tracks = []
     for audio_match in AUDIO_INFO_PATTERN.finditer(infos):
         ainfo = audio_match.groupdict()
         if ainfo['lang'] is None:
             ainfo['lang'] = 'und'
         audio_tracks.append(ainfo)
 
-    medio_info = {
+    return {
         'vcodec': codec,
         'frame_width': int(res_width),
         'frame_height': int(res_height),
@@ -52,7 +52,6 @@ def parse_media_details(infos):
         'pix_fmt': pix_fmt,
         'audio': audio_tracks,
     }
-    return medio_info
 
 
 def extract_frame_size(ffmpeg_parse_info: str):
@@ -66,7 +65,7 @@ def extract_frame_size(ffmpeg_parse_info: str):
     for pattern in possible_patterns:
         match = pattern.search(ffmpeg_parse_info)
         if match is not None:
-            x, y = map(int, match.groups()[0:2])
+            x, y = map(int, match.groups()[:2])
             break
 
     if match is None:
@@ -75,21 +74,14 @@ def extract_frame_size(ffmpeg_parse_info: str):
     return (x, y)
 
 
-def compile_args(input_fn: str = 'pipe:',
-                 output_fn: str = 'pipe:',
-                 video_filters: str = [],
-                 audio_filters: str = [],
-                 input_options=dict(),
-                 output_options=dict(),
-                 overwrite_output: bool = True):
+def compile_args(input_fn: str = 'pipe:', output_fn: str = 'pipe:', video_filters: str = [], audio_filters: str = [], input_options={}, output_options={}, overwrite_output: bool = True):
     """Wrapper for various `FFmpeg <https://www.ffmpeg.org/>`_ related applications (ffmpeg,
     ffprobe).
     """
     args = ['ffmpeg', '-threads', '0']
 
     input_args = []
-    fmt = input_options.pop('format', None)
-    if fmt:
+    if fmt := input_options.pop('format', None):
         input_args += ['-f', fmt]
 
     start_time = input_options.pop('ss', None)
@@ -102,24 +94,15 @@ def compile_args(input_fn: str = 'pipe:',
     if duration is not None:
         input_args += ['-t', str(duration)]
 
-    vf_args = []
-    if len(video_filters) > 0:
-        vf_args = ['-vf', ','.join(video_filters)]
-
-    af_args = []
-    if len(audio_filters) > 0:
-        af_args = ['-af', ','.join(audio_filters)]
-
+    vf_args = ['-vf', ','.join(video_filters)] if video_filters != "" else []
+    af_args = ['-af', ','.join(audio_filters)] if audio_filters != "" else []
     output_args = []
 
-    fmt = output_options.pop('format', None)
-    if fmt:
+    if fmt := output_options.pop('format', None):
         output_args += ['-f', fmt]
-    video_bitrate = output_options.pop('video_bitrate', None)
-    if video_bitrate:
+    if video_bitrate := output_options.pop('video_bitrate', None):
         output_args += ['-b:v', str(video_bitrate)]
-    audio_bitrate = output_options.pop('audio_bitrate', None)
-    if audio_bitrate:
+    if audio_bitrate := output_options.pop('audio_bitrate', None):
         output_args += ['-b:a', str(audio_bitrate)]
     output_args += kwargs_to_cmd_args(output_options)
 
@@ -157,8 +140,7 @@ def get_media_meta(input_fn: str = 'pipe:',
     _check_input(input_fn, input_data)
     cmd_args = ['ffmpeg']
 
-    fmt = input_options.pop('format', None)
-    if fmt:
+    if fmt := input_options.pop('format', None):
         cmd_args += ['-f', fmt]
     cmd_args += ['-i', input_fn]
 

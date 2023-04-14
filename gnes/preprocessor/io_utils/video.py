@@ -73,9 +73,7 @@ def scale_video(input_fn: str = 'pipe:',
     stdout, _ = run_command(
         cmd_args, input=input_data, pipe_stdout=True, pipe_stderr=True)
 
-    if capture_stdout:
-        return stdout
-    return None
+    return stdout if capture_stdout else None
 
 
 def encode_video(images: 'np.ndarray',
@@ -96,7 +94,7 @@ def encode_video(images: 'np.ndarray',
         'format': 'rawvideo',
         'pix_fmt': pix_fmt,
         'framerate': frame_rate,
-        's': '{}x{}'.format(width, height),
+        's': f'{width}x{height}',
     }
 
     output_kwargs = {
@@ -197,7 +195,7 @@ def capture_frames(input_fn: str = 'pipe:',
         if fps:
             video_filters += ['fps=%d' % fps]
         if scale:
-            video_filters += ['scale=%s' % scale]
+            video_filters += [f'scale={scale}']
 
         output_kwargs = {
             'format': 'image2pipe',
@@ -215,13 +213,8 @@ def capture_frames(input_fn: str = 'pipe:',
             output_options=output_kwargs)
         out, _ = run_command(cmd_args, pipe_stdout=True, pipe_stderr=True)
 
-        depth = 3
-        if pix_fmt == 'rgba':
-            depth = 4
-
-        frames = np.frombuffer(out,
-                               np.uint8).reshape([-1, height, width, depth])
-        return frames
+        depth = 4 if pix_fmt == 'rgba' else 3
+        return np.frombuffer(out, np.uint8).reshape([-1, height, width, depth])
 
 
 # def read_frame_as_jpg(in_filename, frame_num):

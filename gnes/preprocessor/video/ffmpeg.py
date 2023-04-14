@@ -77,10 +77,10 @@ class FFmpegPreprocessor(BaseVideoPreprocessor):
         # n_channel is usually 3 for RGB images
         n_channel = images[0].shape[-1]
         for i, image in enumerate(images):
-            weight[i] = sum([
+            weight[i] = sum(
                 cv2.calcHist([image], [_], None, [256], [0, 256]).var()
                 for _ in range(n_channel)
-            ])
+            )
         weight = weight / weight.sum()
 
         # normalized result
@@ -93,7 +93,7 @@ class FFmpegPreprocessor(BaseVideoPreprocessor):
         ret = []
         for i, h in enumerate(hash_list):
             flag = 1
-            if len(ret) >= 1:
+            if ret:
                 # only keep images with high phash diff
                 # comparing only last kept 9 pics
                 for j in range(1, min(len(ret) + 1, 9)):
@@ -149,33 +149,41 @@ class FFmpegVideoSegmentor(BaseVideoPreprocessor):
             sub_videos = []
             if len(frames) >= 1:
                 # cut by frame: should specify how many frames to cut
-                if self.segment_method == 'cut_by_frame':
-                    if self.segment_interval == -1:
-                        sub_videos = [frames]
-                    else:
-                        sub_videos = [frames[_: _ + self.segment_interval]
-                                      for _ in range(0, len(frames), self.segment_interval)]
-                # cut by num: should specify how many chunks for each doc
-                elif self.segment_method == 'cut_by_num':
-                    if self.segment_num >= 2:
-                        _interval = len(frames) // (self.segment_num - 1)
-                        sub_videos = [frames[_: _ + _interval]
-                                      for _ in range(0, len(frames), _interval)]
-                    else:
-                        sub_videos = [frames]
+                if (
+                    self.segment_method != 'cut_by_frame'
+                    and self.segment_method == 'cut_by_num'
+                    and self.segment_num >= 2
+                ):
+                    _interval = len(frames) // (self.segment_num - 1)
+                    sub_videos = [frames[_: _ + _interval]
+                                  for _ in range(0, len(frames), _interval)]
+                elif (
+                    self.segment_method != 'cut_by_frame'
+                    and self.segment_method == 'cut_by_num'
+                    or self.segment_method != 'cut_by_frame'
+                    and self.segment_method == 'cut_by_clustering'
+                    and self.segment_num < 2
+                ):
+                    sub_videos = [frames]
 
-                # cut by clustering: params required
-                #   segment_num
-                elif self.segment_method == 'cut_by_clustering':
-                    if self.segment_num >= 2:
-                        hash_v = [phash_descriptor(_).hash for _ in frames]
-                        hash_v = np.array(hash_v, dtype=np.int32).reshape([len(hash_v), -1])
-                        label_v = KMeans(n_clusters=self.segment_num).fit_predict(hash_v)
-                        sub_videos = [[frames[i] for i, j in enumerate(label_v) if j == _] for _ in
-                                      range(self.segment_num)]
-                    else:
-                        sub_videos = [frames]
-
+                elif (
+                    self.segment_method != 'cut_by_frame'
+                    and self.segment_method == 'cut_by_clustering'
+                ):
+                    hash_v = [phash_descriptor(_).hash for _ in frames]
+                    hash_v = np.array(hash_v, dtype=np.int32).reshape([len(hash_v), -1])
+                    label_v = KMeans(n_clusters=self.segment_num).fit_predict(hash_v)
+                    sub_videos = [[frames[i] for i, j in enumerate(label_v) if j == _] for _ in
+                                  range(self.segment_num)]
+                elif self.segment_method == 'cut_by_frame':
+                    sub_videos = (
+                        [frames]
+                        if self.segment_interval == -1
+                        else [
+                            frames[_ : _ + self.segment_interval]
+                            for _ in range(0, len(frames), self.segment_interval)
+                        ]
+                    )
                 for ci, chunk in enumerate(sub_videos):
                     c = doc.chunks.add()
                     c.doc_id = doc.doc_id

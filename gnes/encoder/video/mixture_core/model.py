@@ -34,10 +34,7 @@ class NetFV:
                  save_dir=None,
                  multitask_method=None,
                  l2_penalty=1e-6):
-        if input_size == None:
-            self.input_size = feature_size
-        else:
-            self.input_size = input_size
+        self.input_size = feature_size if input_size is None else input_size
         self.feature_size = feature_size
         self.use_length = use_length
         self.is_training = is_training

@@ -35,10 +35,12 @@ def register_all_class(cls2file_map: Dict, module_name: str):
     import importlib
     for k, v in cls2file_map.items():
         try:
-            getattr(importlib.import_module('gnes.%s.%s' % (module_name, v)), k)
+            getattr(importlib.import_module(f'gnes.{module_name}.{v}'), k)
         except ImportError as ex:
             default_logger = set_logger('GNES')
-            default_logger.warning('fail to register %s, due to "%s", you will not be able to use this model' % (k, ex))
+            default_logger.warning(
+                f'fail to register {k}, due to "{ex}", you will not be able to use this model'
+            )
     load_contrib_module()
 
 
@@ -46,9 +48,16 @@ def import_class_by_str(name: str):
     def _import(module_name, class_name):
         import importlib
 
-        cls2file = getattr(importlib.import_module('gnes.%s' % module_name), '_cls2file_map')
+        cls2file = getattr(
+            importlib.import_module(f'gnes.{module_name}'), '_cls2file_map'
+        )
         if class_name in cls2file:
-            return getattr(importlib.import_module('gnes.%s.%s' % (module_name, cls2file[class_name])), class_name)
+            return getattr(
+                importlib.import_module(
+                    f'gnes.{module_name}.{cls2file[class_name]}'
+                ),
+                class_name,
+            )
 
     search_modules = ['encoder', 'indexer', 'preprocessor', 'router', 'score_fn']
 
@@ -57,7 +66,7 @@ def import_class_by_str(name: str):
         if r:
             return r
     else:
-        raise ImportError('Can not locate any class with name: %s, misspelling?' % name)
+        raise ImportError(f'Can not locate any class with name: {name}, misspelling?')
 
 
 class TrainableType(type):
@@ -74,16 +83,12 @@ class TrainableType(type):
         _cls = super().__new__(cls, *args, **kwargs)
         return cls.register_class(_cls)
 
-    def __call__(cls, *args, **kwargs):
+    def __call__(self, *args, **kwargs):
         # do _preload_package
-        getattr(cls, '_pre_init', lambda *x: None)()
+        getattr(self, '_pre_init', lambda *x: None)()
 
-        if 'gnes_config' in kwargs:
-            gnes_config = kwargs.pop('gnes_config')
-        else:
-            gnes_config = {}
-
-        obj = type.__call__(cls, *args, **kwargs)
+        gnes_config = kwargs.pop('gnes_config') if 'gnes_config' in kwargs else {}
+        obj = type.__call__(self, *args, **kwargs)
 
         # set attribute with priority
         # gnes_config in YAML > class attribute > default_gnes_config
@@ -91,9 +96,10 @@ class TrainableType(type):
             if k in gnes_config:
                 v = gnes_config[k]
             v = _expand_env_var(v)
-            if not hasattr(obj, k):
-                if k == 'is_trained' and isinstance(obj, CompositionalTrainableBase):
-                    continue
+            if not hasattr(obj, k) and (
+                k != 'is_trained'
+                or not isinstance(obj, CompositionalTrainableBase)
+            ):
                 setattr(obj, k, v)
 
         getattr(obj, '_post_init_wrapper', lambda *x: None)()
@@ -180,7 +186,7 @@ class TrainableBase(metaclass=TrainableType):
     def _post_init_wrapper(self):
         if not getattr(self, 'name', None) and os.environ.get('GNES_WARN_UNNAMED_COMPONENT', '1') == '1':
             _id = str(uuid.uuid4()).split('-')[0]
-            _name = '%s-%s' % (self.__class__.__name__, _id)
+            _name = f'{self.__class__.__name__}-{_id}'
             if self.warn_unnamed:
                 self.logger.warning(
                     'this object is not named ("name" is not found under "gnes_config" in YAML config), '
@@ -211,7 +217,7 @@ class TrainableBase(metaclass=TrainableType):
 
         :return:
         """
-        return os.path.join(self.work_dir, '%s.bin' % self.name)
+        return os.path.join(self.work_dir, f'{self.name}.bin')
 
     @property
     def yaml_full_path(self):
@@ -219,7 +225,7 @@ class TrainableBase(metaclass=TrainableType):
         Get the file path of the yaml config
         :return:
         """
-        return os.path.join(self.work_dir, '%s.yml' % self.name)
+        return os.path.join(self.work_dir, f'{self.name}.yml')
 
     def __getstate__(self):
         d = dict(self.__dict__)
@@ -254,7 +260,7 @@ class TrainableBase(metaclass=TrainableType):
             f = tempfile.NamedTemporaryFile('w', delete=False, dir=os.environ.get('GNES_VOLUME', None)).name
         with open(f, 'wb') as fp:
             pickle.dump(self, fp)
-        self.logger.critical('model is serialized to %s' % f)
+        self.logger.critical(f'model is serialized to {f}')
 
     @profiling
     def dump_yaml(self, filename: str = None) -> None:
@@ -315,7 +321,7 @@ class TrainableBase(metaclass=TrainableType):
     @classmethod
     def to_yaml(cls, representer, data):
         tmp = data._dump_instance_to_yaml(data)
-        return representer.represent_mapping('!' + cls.__name__, tmp)
+        return representer.represent_mapping(f'!{cls.__name__}', tmp)
 
     @classmethod
     def from_yaml(cls, constructor, node, stop_on_import_error=False):
@@ -340,7 +346,7 @@ class TrainableBase(metaclass=TrainableType):
         load_from_dump = False
         if dump_path:
             obj = cls.load(dump_path)
-            obj.logger.critical('restore %s from %s' % (cls.__name__, dump_path))
+            obj.logger.critical(f'restore {cls.__name__} from {dump_path}')
             load_from_dump = True
         else:
             cls.init_from_yaml = True
@@ -357,7 +363,7 @@ class TrainableBase(metaclass=TrainableType):
                 tmp_p = {kk: _expand_env_var(vv) for kk, vv in data.get('parameters', {}).items()}
                 obj = cls(**tmp_p, gnes_config=data.get('gnes_config', {}))
 
-            obj.logger.critical('initialize %s from a yaml config' % cls.__name__)
+            obj.logger.critical(f'initialize {cls.__name__} from a yaml config')
             cls.init_from_yaml = False
 
         if node.tag in {'!PipelineEncoder', '!CompositionalTrainableBase'}:
@@ -368,7 +374,10 @@ class TrainableBase(metaclass=TrainableType):
     @staticmethod
     def _get_dump_path_from_config(gnes_config: Dict):
         if 'name' in gnes_config:
-            dump_path = os.path.join(gnes_config.get('work_dir', os.getcwd()), '%s.bin' % gnes_config['name'])
+            dump_path = os.path.join(
+                gnes_config.get('work_dir', os.getcwd()),
+                f"{gnes_config['name']}.bin",
+            )
             if os.path.exists(dump_path):
                 return dump_path
 
@@ -422,14 +431,13 @@ class CompositionalTrainableBase(TrainableBase):
         if isinstance(self.components, list):
             for be in self.components:
                 be.close()
-        # no typology
         elif isinstance(self.components, dict):
             for be in self.components.values():
                 be.close()
-        elif self.components is None:
-            pass
-        else:
-            raise TypeError('components must be dict or list, received %s' % type(self.components))
+        elif self.components is not None:
+            raise TypeError(
+                f'components must be dict or list, received {type(self.components)}'
+            )
 
     def _copy_from(self, x: T):
         if isinstance(self.components, list):
@@ -439,13 +447,15 @@ class CompositionalTrainableBase(TrainableBase):
             for k, v in self.components.items():
                 v._copy_from(x.components[k])
         else:
-            raise TypeError('components must be dict or list, received %s' % type(self.components))
+            raise TypeError(
+                f'components must be dict or list, received {type(self.components)}'
+            )
 
     @classmethod
     def to_yaml(cls, representer, data):
         tmp = super()._dump_instance_to_yaml(data)
         tmp['components'] = data.components
-        return representer.represent_mapping('!' + cls.__name__, tmp)
+        return representer.represent_mapping(f'!{cls.__name__}', tmp)
 
     @classmethod
     def from_yaml(cls, constructor, node):
@@ -456,7 +466,4 @@ class CompositionalTrainableBase(TrainableBase):
 
 
 def _expand_env_var(v: str) -> str:
-    if isinstance(v, str):
-        return parse_arg(os.path.expandvars(v))
-    else:
-        return v
+    return parse_arg(os.path.expandvars(v)) if isinstance(v, str) else v

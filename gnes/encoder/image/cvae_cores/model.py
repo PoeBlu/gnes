@@ -88,11 +88,7 @@ class CVAE(tf.keras.Model):
 
     def decode(self, z, apply_sigmoid=False):
         logits = self.generative_net(z)
-        if apply_sigmoid:
-            probs = tf.sigmoid(logits)
-            return probs
-
-        return logits
+        return tf.sigmoid(logits) if apply_sigmoid else logits
 
     def compute_loss(self, x):
         mean, logvar = self.encode(x)

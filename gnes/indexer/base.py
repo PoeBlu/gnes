@@ -134,10 +134,7 @@ class BaseChunkIndexer(BaseIndexer):
 
     @property
     def num_docs(self):
-        if self.helper_indexer:
-            return self.helper_indexer._num_docs
-        else:
-            return self._num_docs
+        return self.helper_indexer._num_docs if self.helper_indexer else self._num_docs
 
     @property
     def num_chunks(self):
@@ -238,7 +235,7 @@ class JointIndexer(CompositionalTrainableBase):
         elif isinstance(docs, list):
             self._doc_indexer.add(keys, docs, *args, **kwargs)
         else:
-            raise TypeError('can not find an indexer for doc type: %s' % type(docs))
+            raise TypeError(f'can not find an indexer for doc type: {type(docs)}')
 
     def query(self,
               keys: Any,
@@ -246,7 +243,7 @@ class JointIndexer(CompositionalTrainableBase):
               *args,
               **kwargs) -> List[List[Tuple]]:
         topk_results = self._binary_indexer.query(keys, top_k, *args, **kwargs)
-        doc_caches = dict()
+        doc_caches = {}
         topk_results_with_docs = []
         for topk in topk_results:
             topk_wd = []

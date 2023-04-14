@@ -11,7 +11,7 @@ class TestProto(unittest.TestCase):
     def setUp(self):
         self.num_sample = 1000000
         self.num_query = 10000
-        self.keys = np.array([j for j in range(self.num_sample)])
+        self.keys = np.array(list(range(self.num_sample)))
         self.key_offset = np.stack([self.keys, np.random.randint(0, 255, size=[self.num_sample])],
                                    axis=1).tolist()
         self.weights = np.random.random(size=[self.num_sample]).tolist()
@@ -52,15 +52,15 @@ class TestProto(unittest.TestCase):
         self._test_any(DictKeyIndexer)
 
     def test_bench_numpy_list(self):
+        b_size = 1000
         for cls in [ListKeyIndexer, NumpyKeyIndexer, ListNumpyKeyIndexer, DictKeyIndexer]:
             a = cls()
-            b_size = 1000
-            with TimeContext('%s:add()' % cls.__name__):
+            with TimeContext(f'{cls.__name__}:add()'):
                 for k, w in zip(batch_iterator(self.key_offset, b_size), batch_iterator(self.weights, b_size)):
                     a.add(k, w)
                 self.assertEqual(a.num_docs, self.num_sample)
                 self.assertEqual(a.num_chunks, self.num_sample)
 
-            with TimeContext('%s:query()' % cls.__name__):
+            with TimeContext(f'{cls.__name__}:query()'):
                 for k in batch_iterator(self.query, b_size):
                     a.query(k)

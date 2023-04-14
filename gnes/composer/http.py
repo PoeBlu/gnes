@@ -38,13 +38,13 @@ class YamlComposerHttp:
 
         def do_GET(self):
             if str(self.path) != '/':
-                self._set_response('<h1>"%s" is not a valid entrypoint</h1>' % self.path, 400)
+                self._set_response(f'<h1>"{self.path}" is not a valid entrypoint</h1>', 400)
                 return
             self._set_response(self.default_html)
 
         def do_POST(self):
             if str(self.path) != '/generate':
-                self._set_response('<h1>"%s" is not a valid entrypoint</h1>' % self.path, 400)
+                self._set_response(f'<h1>"{self.path}" is not a valid entrypoint</h1>', 400)
                 return
             content_length = int(self.headers['Content-Length'])  # <--- Gets the size of data
             data = self.rfile.read(content_length)  # <--- Gets the data itself

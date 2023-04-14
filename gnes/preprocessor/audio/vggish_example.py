@@ -99,8 +99,8 @@ class VggishPreprocessor(BaseAudioPreprocessor):
             self.example_window_seconds * features_sample_rate))
         example_hop_length = int(round(
             self.example_hop_seconds * features_sample_rate))
-        log_mel_examples = mel_features.frame(
+        return mel_features.frame(
             log_mel,
             window_length=example_window_length,
-            hop_length=example_hop_length)
-        return log_mel_examples
+            hop_length=example_hop_length,
+        )

@@ -63,10 +63,7 @@ class DirectoryIndexer(BDI):
             doc = gnes_pb2.Document()
             target_dirs = os.path.join(self.data_path, str(k))
 
-            if not os.path.exists(target_dirs):
-                if self.keep_na_doc:
-                    res.append(self._NOT_FOUND)
-            else:
+            if os.path.exists(target_dirs):
                 with open(os.path.join(target_dirs, '.meta'), 'rb') as f:
                     doc.meta_info = f.read()
                 for raw_file in os.listdir(target_dirs):
@@ -76,5 +73,7 @@ class DirectoryIndexer(BDI):
                         with open(os.path.join(target_dirs, raw_file), 'rb') as raw:
                             c.raw = raw.read()
                 res.append(doc)
+            elif self.keep_na_doc:
+                res.append(self._NOT_FOUND)
         return res
 

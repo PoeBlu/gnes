@@ -49,7 +49,7 @@ def get_video_length_from_raw(buffer_data):
     import re
     ffmpeg_cmd = ['ffmpeg', '-i', '-', '-']
     with sp.Popen(ffmpeg_cmd, stdin=sp.PIPE, stdout=sp.PIPE, stderr=sp.PIPE,
-                  bufsize=-1, shell=False) as pipe:
+                      bufsize=-1, shell=False) as pipe:
         _, stdout = pipe.communicate(buffer_data)
         stdout = stdout.decode()
         matches = re.search(r"Duration:\s{1}(?P<hours>\d+?):(?P<minutes>\d+?):(?P<seconds>\d+\.\d+?),", stdout,
@@ -57,7 +57,7 @@ def get_video_length_from_raw(buffer_data):
         h = str(int(matches['hours']))
         m = str(int(matches['minutes']))
         s = str(round(float(matches['seconds'])))
-        duration = datetime.datetime.strptime(h + ':' + m + ':' + s, '%H:%M:%S')
+        duration = datetime.datetime.strptime(f'{h}:{m}:{s}', '%H:%M:%S')
     return duration
 
 
@@ -67,13 +67,9 @@ def get_audio(buffer_data, sample_rate, interval,
 
     audio_list = []
     start_time = datetime.datetime.strptime('00:00:00', '%H:%M:%S')
-    while True:
-        if start_time == duration:
-            break
-
+    while start_time != duration:
         end_time = start_time + timedelta(seconds=interval)
-        if end_time > duration:
-            end_time = duration
+        end_time = min(end_time, duration)
         ffmpeg_cmd = ['ffmpeg', '-i', '-',
                       '-f', 'wav',
                       '-ar', str(sample_rate),
@@ -116,14 +112,16 @@ def split_mp4_random(video_path, avg_length, max_clip_second=10):
     ts_group = [[] for _ in range(num_part)]
 
     for i, (_start, _du) in enumerate(zip(start, s)):
-        ts_group[i % num_part].append(' -ss {} -t {} -i {} '.format(_start, _du, video_path))
+        ts_group[i % num_part].append(f' -ss {_start} -t {_du} -i {video_path} ')
 
     prefix = os.path.basename(video_path).replace('.mp4', '')
     for i in range(num_part):
         i_len = len(ts_group[i])
-        cmd = 'ffmpeg' + ''.join(
-            ts_group[i]) + '-filter_complex "{}concat=n={}:v=1:a=1" -strict -2 {}_{}.mp4 -y'.format(
-            ''.join(['[{}]'.format(k) for k in range(i_len)]), i_len, prefix, i)
+        cmd = (
+            'ffmpeg'
+            + ''.join(ts_group[i])
+            + f"""-filter_complex "{''.join([f'[{k}]' for k in range(i_len)])}concat=n={i_len}:v=1:a=1" -strict -2 {prefix}_{i}.mp4 -y"""
+        )
         os.system(cmd)
 
 
@@ -225,8 +223,9 @@ def canny_edge(image: 'np.ndarray', **kwargs) -> 'np.ndarray':
     low_threshold = ((1.0 - sigma) * v).astype("float32")
     high_threshold = ((1.0 + sigma) * v).astype("float32")
     tmp_image = cv2.GaussianBlur(image, gauss_kernel, 1.2)
-    edge_image = cv2.Canny(tmp_image, low_threshold, high_threshold, L2gradient=l2_gradient)
-    return edge_image
+    return cv2.Canny(
+        tmp_image, low_threshold, high_threshold, L2gradient=l2_gradient
+    )
 
 
 def phash_descriptor(image: 'np.ndarray'):
@@ -278,9 +277,10 @@ def compare_ecr(descriptors: List['np.ndarray'], **kwargs) -> List[float]:
         dicts.append(tmp_dict)
 
     for _ in range(neigh_avg):
-        tmp_dict = []
-        for i in range(1, len(dicts) - 1):
-            tmp_dict.append(max(dicts[i - 1], dicts[i], dicts[i + 1]))
+        tmp_dict = [
+            max(dicts[i - 1], dicts[i], dicts[i + 1])
+            for i in range(1, len(dicts) - 1)
+        ]
         dicts = tmp_dict.copy()
 
     return dicts
@@ -313,11 +313,10 @@ def kmeans_algo(distances: List[float], **kwargs) -> List[int]:
     # select which cluster includes shot frames
     big_center = np.argmax(clt.cluster_centers_)
 
-    shots = []
-    shots.append(0)
-    for i in range(0, len(clt.labels_)):
-        if big_center == clt.labels_[i]:
-            shots.append((i + 1))
+    shots = [0]
+    shots.extend(
+        i + 1 for i in range(len(clt.labels_)) if big_center == clt.labels_[i]
+    )
     if shots[-1] < num_frames:
         shots.append(num_frames)
     else:
@@ -327,15 +326,8 @@ def kmeans_algo(distances: List[float], **kwargs) -> List[int]:
 
 def check_motion(prev_dists: List[float], cur_dist: float, motion_threshold: float = 0.75):
     """ Returns a boolean value to decide if the peak is due to a motion"""
-    close_peaks = 0
-    # We observe the a defined number of frames before the peak
-    for dist in prev_dists:
-        if dist > cur_dist * motion_threshold:
-            close_peaks += 1
-    if close_peaks >= len(prev_dists) / 2:
-        return True
-    else:
-        return False
+    close_peaks = sum(dist > cur_dist * motion_threshold for dist in prev_dists)
+    return close_peaks >= len(prev_dists) / 2
 
 
 def thre_algo(distances: List[float], **kwargs) -> List[int]:
@@ -352,14 +344,12 @@ def motion_algo(distances: List[float], **kwargs) -> List[int]:
     motion_step = kwargs.get('motion_step', 15)
     neigh_avg = kwargs.get('neigh_avg', 2)
 
-    shots = []
     num_frames = len(distances) + 2 * neigh_avg + 1
     p = peakutils.indexes(np.array(distances).astype('float32'), thres=threshold, min_dist=min_dist) if len(distances) else []
     if len(p) == 0:
         return [0, num_frames]
 
-    shots.append(0)
-    shots.append(p[0] + neigh_avg + 1)
+    shots = [0, p[0] + neigh_avg + 1]
     for i in range(1, len(p)):
         # We check that the peak is not due to a motion in the image
         valid_dist = not motion_step or not check_motion(distances[p[i]-motion_step:p[i]], distances[p[i]])
@@ -381,10 +371,12 @@ def detect_peak_boundary(distances: List[float],
         'motion': motion_algo
     }
 
-    if method in detect_method.keys():
+    if method in detect_method:
         return detect_method[method](distances, **kwargs)
     else:
-        logger.error("detect video shot by [%s] not implemented! Please use threshold, kmeans or motion!" % method)
+        logger.error(
+            f"detect video shot by [{method}] not implemented! Please use threshold, kmeans or motion!"
+        )
 
 
 def torch_transform(img):

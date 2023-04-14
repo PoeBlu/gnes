@@ -51,7 +51,7 @@ class DocBatchRouter(BaseMapRouter):
 
     def apply(self, msg: 'gnes_pb2.Message', *args, **kwargs) -> Generator:
         if self.batch_size and self.batch_size > 0:
-            batches = [b for b in batch_iterator(msg.request.index.docs, self.batch_size)]
+            batches = list(batch_iterator(msg.request.index.docs, self.batch_size))
             num_part = len(batches)
             for p_idx, b in enumerate(batches, start=1):
                 _msg = gnes_pb2.Message()

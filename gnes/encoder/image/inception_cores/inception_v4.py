@@ -251,7 +251,7 @@ def inception_v4_base(inputs, final_endpoint='Mixed_7d', scope=None):
                 block_scope = 'Mixed_7' + chr(ord('b') + idx)
                 net = block_inception_c(net, block_scope)
                 if add_and_check_final(block_scope, net): return net, end_points
-    raise ValueError('Unknown final endpoint %s' % final_endpoint)
+    raise ValueError(f'Unknown final endpoint {final_endpoint}')
 
 
 def inception_v4(inputs, num_classes=1001, is_training=True,

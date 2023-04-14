@@ -17,7 +17,7 @@ extras_dep = {
 
 
 def combine_dep(new_key, base_keys):
-    extras_dep[new_key] = list(set(k for v in base_keys for k in extras_dep[v]))
+    extras_dep[new_key] = list({k for v in base_keys for k in extras_dep[v]})
 
 
 combine_dep('nlp', ['bert', 'flair', 'transformers'])
@@ -25,4 +25,4 @@ combine_dep('cn_nlp', ['chinese', 'nlp'])
 combine_dep('all', [k for k in extras_dep if k != 'elmo'])
 
 for k, v in extras_dep.items():
-    print('<tr><td><pre>%s</pre></td><td>%s</td>' % ('pip install gnes[%s]' % k, ', '.join(v)))
+    print(f"<tr><td><pre>pip install gnes[{k}]</pre></td><td>{', '.join(v)}</td>")

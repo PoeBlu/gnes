@@ -72,12 +72,11 @@ def healthcheck(args):
     add_version(msg.envelope)
     msg.request.control.command = gnes_pb2.Request.ControlRequest.STATUS
     for j in range(args.retries):
-        r = send_ctrl_message(ctrl_addr, msg, timeout=args.timeout)
-        if not r:
-            print('%s is not responding, retry (%d/%d) in 1s' % (ctrl_addr, j + 1, args.retries))
-        else:
-            print('%s returns %s' % (ctrl_addr, r))
+        if r := send_ctrl_message(ctrl_addr, msg, timeout=args.timeout):
+            print(f'{ctrl_addr} returns {r}')
             exit(0)
+        else:
+            print('%s is not responding, retry (%d/%d) in 1s' % (ctrl_addr, j + 1, args.retries))
         time.sleep(1)
     exit(1)
 

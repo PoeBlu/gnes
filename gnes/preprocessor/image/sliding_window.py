@@ -98,8 +98,8 @@ class _SlidingPreprocessor(SizedPreprocessor):
     @staticmethod
     def _get_location(all_subareas: List[List[int]], center_point: List[float]) -> List[bool]:
         location_list = []
-        x_boundary = max([x[2] for x in all_subareas])
-        y_boundary = max([y[3] for y in all_subareas])
+        x_boundary = max(x[2] for x in all_subareas)
+        y_boundary = max(y[3] for y in all_subareas)
         for area in all_subareas:
             if center_point[0] in range(int(area[0]), int(area[2])) and center_point[1] in range(int(area[1]),
                                                                                                  int(area[3])):

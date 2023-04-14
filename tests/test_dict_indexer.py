@@ -24,7 +24,9 @@ class TestDictIndexer(unittest.TestCase):
                             for _ in os.listdir(self.video_path)]
 
         self.pipeline_name = 'pipe-gif'
-        self.pipeline_yml_path = os.path.join(self.dirname, 'yaml/%s.yml' % self.pipeline_name)
+        self.pipeline_yml_path = os.path.join(
+            self.dirname, f'yaml/{self.pipeline_name}.yml'
+        )
         self.data_path = './test_chunkleveldb'
         self.dump_path = os.path.join(self.dirname, 'indexer.bin')
 
@@ -53,18 +55,12 @@ class TestDictIndexer(unittest.TestCase):
             '--yaml_path', '!DictIndexer {gnes_config: {name: dummy_dict_indexer}}',
         ])
 
-        with ServiceManager(IndexerService, e_args), \
-             ServiceManager(PreprocessorService, p_args), \
-             FrontendService(args), \
-             grpc.insecure_channel('%s:%s' % (args.grpc_host, args.grpc_port),
-                                   options=[('grpc.max_send_message_length', 70 * 1024 * 1024),
-                                            ('grpc.max_receive_message_length', 70 * 1024 * 1024)]) as channel:
+        with (ServiceManager(IndexerService, e_args), ServiceManager(PreprocessorService, p_args), FrontendService(args), grpc.insecure_channel(f'{args.grpc_host}:{args.grpc_port}', options=[('grpc.max_send_message_length', 70 * 1024 * 1024),
+                                                ('grpc.max_receive_message_length', 70 * 1024 * 1024)]) as channel):
             stub = gnes_pb2_grpc.GnesRPCStub(channel)
             all_bytes = []
             with open(os.path.join(self.dirname, '26-doc-chinese.txt'), 'r', encoding='utf8') as fp:
-                for v in fp:
-                    if v.strip():
-                        all_bytes.append(v.encode())
+                all_bytes.extend(v.encode() for v in fp if v.strip())
             for r in stub.StreamCall(RequestGenerator.index(all_bytes)):
                 print(r)
 

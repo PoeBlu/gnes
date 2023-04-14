@@ -22,13 +22,11 @@ class foo1(foo):
 
     def __init__(self, a, b=1, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        pass
 
 
 class foo2(foo1):
     def __init__(self, c, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        pass
 
 
 class dummyPipeline(PipelineEncoder):

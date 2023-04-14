@@ -58,11 +58,11 @@ class ParallelType(BetterEnum):
 
     @property
     def is_push(self):
-        return self.value == 0 or self.value == 1
+        return self.value in [0, 1]
 
     @property
     def is_block(self):
-        return self.value == 0 or self.value == 2
+        return self.value in [0, 2]
 
 
 class SocketType(BetterEnum):
@@ -116,14 +116,13 @@ def build_socket(ctx: 'zmq.Context', host: str, port: int, socket_type: 'SocketT
     if socket_type.is_bind:
         host = BaseService.default_host
         if port is None:
-            sock.bind_to_random_port('tcp://%s' % host)
+            sock.bind_to_random_port(f'tcp://{host}')
         else:
             sock.bind('tcp://%s:%d' % (host, port))
+    elif port is None:
+        sock.connect(host)
     else:
-        if port is None:
-            sock.connect(host)
-        else:
-            sock.connect('tcp://%s:%d' % (host, port))
+        sock.connect('tcp://%s:%d' % (host, port))
 
     if socket_type in {SocketType.SUB_CONNECT, SocketType.SUB_BIND}:
         sock.setsockopt(zmq.SUBSCRIBE, identity.encode('ascii') if identity else b'')
@@ -141,14 +140,14 @@ def build_socket(ctx: 'zmq.Context', host: str, port: int, socket_type: 'SocketT
 
 class MessageHandler:
     def __init__(self, mh: 'MessageHandler' = None):
-        self.routes = {k: v for k, v in mh.routes.items()} if mh else {}
-        self.hooks = {k: v for k, v in mh.hooks.items()} if mh else {'pre': [], 'post': []}
+        self.routes = dict(mh.routes.items()) if mh else {}
+        self.hooks = dict(mh.hooks.items()) if mh else {'pre': [], 'post': []}
         self.logger = set_logger(self.__class__.__name__)
         self.service_context = None
 
     def register(self, msg_type: Union[List, Tuple, type]):
         def decorator(f):
-            if isinstance(msg_type, list) or isinstance(msg_type, tuple):
+            if isinstance(msg_type, (list, tuple)):
                 for m in msg_type:
                     self.routes[m] = f
             else:
@@ -168,15 +167,15 @@ class MessageHandler:
         def decorator(f):
             if isinstance(hook_type, str) and hook_type in self.hooks:
                 self.hooks[hook_type].append((f, only_when_verbose))
-            elif isinstance(hook_type, list) or isinstance(hook_type, tuple):
+            elif isinstance(hook_type, (list, tuple)):
                 for h in set(hook_type):
                     if h in self.hooks:
                         self.hooks[h].append((f, only_when_verbose))
                     else:
-                        raise AttributeError('hook type: %s is not supported' % h)
+                        raise AttributeError(f'hook type: {h} is not supported')
                 return f
             else:
-                raise TypeError('hook_type is in bad type: %s' % type(hook_type))
+                raise TypeError(f'hook_type is in bad type: {type(hook_type)}')
 
         return decorator
 
@@ -190,14 +189,14 @@ class MessageHandler:
         hooks = []
         if isinstance(hook_type, str) and hook_type in self.hooks:
             hooks.extend(self.hooks[hook_type])
-        elif isinstance(hook_type, list) or isinstance(hook_type, tuple):
+        elif isinstance(hook_type, (list, tuple)):
             for h in set(hook_type):
                 if h in self.hooks:
                     hooks.extend(self.hooks[h])
                 else:
-                    raise AttributeError('hook type: %s is not supported' % h)
+                    raise AttributeError(f'hook type: {h} is not supported')
         else:
-            raise TypeError('hook_type is in bad type: %s' % type(hook_type))
+            raise TypeError(f'hook_type is in bad type: {type(hook_type)}')
 
         for fn, only_verbose in hooks:
             if (only_verbose and self.service_context.args.verbose) or (not only_verbose):
@@ -210,7 +209,9 @@ class MessageHandler:
 
     def call_routes(self, msg: 'gnes_pb2.Message'):
         def get_default_fn(m_type):
-            self.logger.warning('cant find handler for message type: %s, fall back to the default handler' % m_type)
+            self.logger.warning(
+                f'cant find handler for message type: {m_type}, fall back to the default handler'
+            )
             f = self.routes.get(m_type, self.routes[NotImplementedError])
             return f
 
@@ -228,7 +229,7 @@ class MessageHandler:
         else:
             fn = get_default_fn(type(msg))
 
-        self.logger.info('handling message with %s' % fn.__name__)
+        self.logger.info(f'handling message with {fn.__name__}')
         return fn(self.service_context, msg)
 
     def call_routes_send_back(self, msg: 'gnes_pb2.Message', out_sock):
@@ -308,7 +309,7 @@ class BaseService(metaclass=ConcurrentService):
         self._model = None
         self.use_event_loop = True
         self.ctrl_addr = 'tcp://%s:%d' % (self.default_host, self.args.port_ctrl)
-        self.logger.info('control address: %s' % self.ctrl_addr)
+        self.logger.info(f'control address: {self.ctrl_addr}')
         self.send_recv_kwargs = dict(
             check_version=self.args.check_version,
             timeout=self.args.timeout,
@@ -336,19 +337,21 @@ class BaseService(metaclass=ConcurrentService):
             time.sleep(self.args.dump_interval)
 
     def dump(self):
-        if not self.args.read_only:
-            if self._model:
-                self.logger.info('dumping changes to the model...')
-                self._model.dump()
-                self.logger.info('dumping finished!')
-        else:
+        if self.args.read_only:
             self.logger.info('no dumping as "read_only" set to true.')
+
+        elif self._model:
+            self.logger.info('dumping changes to the model...')
+            self._model.dump()
+            self.logger.info('dumping finished!')
 
     @handler.register_hook(hook_type='post')
     def _hook_warn_body_type_change(self, msg: 'gnes_pb2.Message', *args, **kwargs):
         new_type = msg.WhichOneof('body')
         if new_type != self._msg_old_type:
-            self.logger.warning('message body type has changed from "%s" to "%s"' % (self._msg_old_type, new_type))
+            self.logger.warning(
+                f'message body type has changed from "{self._msg_old_type}" to "{new_type}"'
+            )
 
     @handler.register_hook(hook_type='post')
     def _hook_sort_response(self, msg: 'gnes_pb2.Message', *args, **kwargs):
@@ -365,13 +368,15 @@ class BaseService(metaclass=ConcurrentService):
     def _hook_add_route(self, msg: 'gnes_pb2.Message', *args, **kwargs):
         add_route(msg.envelope, self._model.__class__.__name__, self.args.identity)
         self._msg_old_type = msg.WhichOneof('body')
-        self.logger.info('a message in type: %s with route: %s' % (self._msg_old_type, router2str(msg)))
+        self.logger.info(
+            f'a message in type: {self._msg_old_type} with route: {router2str(msg)}'
+        )
 
     @handler.register_hook(hook_type='post')
     def _hook_update_route_timestamp(self, msg: 'gnes_pb2.Message', *args, **kwargs):
         msg.envelope.routes[-1].end_time.GetCurrentTime()
         if self.args.route_table:
-            self.logger.info('route: %s' % router2str(msg))
+            self.logger.info(f'route: {router2str(msg)}')
             self.logger.info('route table: \n%s' % make_route_table(msg.envelope.routes))
 
     @zmqd.context()
@@ -409,7 +414,7 @@ class BaseService(metaclass=ConcurrentService):
                 elif socks.get(ctrl_sock) == zmq.POLLIN:
                     pull_sock = ctrl_sock
                 else:
-                    self.logger.error('received message from unknown socket: %s' % socks)
+                    self.logger.error(f'received message from unknown socket: {socks}')
                 if self.use_event_loop or pull_sock == ctrl_sock:
                     with TimeContext('handling message', self.logger):
                         self.is_handler_done.clear()
@@ -419,7 +424,7 @@ class BaseService(metaclass=ConcurrentService):
 
                         # choose output sock
                         if msg.request and msg.request.WhichOneof('body') and \
-                                isinstance(getattr(msg.request, msg.request.WhichOneof('body')),
+                                    isinstance(getattr(msg.request, msg.request.WhichOneof('body')),
                                            gnes_pb2.Request.ControlRequest):
                             o_sock = ctrl_sock
                         else:
@@ -444,7 +449,7 @@ class BaseService(metaclass=ConcurrentService):
         except ComponentNotLoad:
             self.logger.error('component can not be correctly loaded, terminated')
         except Exception as ex:
-            self.logger.error('unknown exception: %s' % str(ex), exc_info=True)
+            self.logger.error(f'unknown exception: {str(ex)}', exc_info=True)
         finally:
             self.is_ready.set()
             self.is_event_loop.clear()
@@ -458,7 +463,7 @@ class BaseService(metaclass=ConcurrentService):
 
     def load_model(self, base_class: Type[TrainableBase], yaml_path=None) -> T:
         try:
-            return base_class.load_yaml(self.args.yaml_path if not yaml_path else yaml_path)
+            return base_class.load_yaml(yaml_path if yaml_path else self.args.yaml_path)
         except FileNotFoundError:
             raise ComponentNotLoad
 
@@ -475,7 +480,7 @@ class BaseService(metaclass=ConcurrentService):
         elif msg.request.control.command == gnes_pb2.Request.ControlRequest.STATUS:
             msg.response.control.status = gnes_pb2.Response.READY
         else:
-            raise ServiceError('dont know how to handle %s' % msg.request.control)
+            raise ServiceError(f'dont know how to handle {msg.request.control}')
 
     def close(self):
         if self._model:

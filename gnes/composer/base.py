@@ -135,13 +135,16 @@ class YamlComposer:
 
     def check_fields(self, comp: Dict) -> bool:
         if 'name' not in comp:
-            raise AttributeError('a component must have a name (choices: %s)' % ', '.join(self.comp2file.keys()))
+            raise AttributeError(
+                f"a component must have a name (choices: {', '.join(self.comp2file.keys())})"
+            )
         if comp['name'] not in self.comp2file:
             raise AttributeError(
-                'a component must be one of: %s, but given %s' % (', '.join(self.comp2file.keys()), comp['name']))
+                f"a component must be one of: {', '.join(self.comp2file.keys())}, but given {comp['name']}"
+            )
         for k in comp:
             if k not in self.Layer.default_values:
-                self.logger.warning('your yaml contains an unrecognized key named "%s"' % k)
+                self.logger.warning(f'your yaml contains an unrecognized key named "{k}"')
         for k, v in self.Layer.default_values.items():
             if k not in comp:
                 comp[k] = v
@@ -158,8 +161,9 @@ class YamlComposer:
         all_layers = []  # type: List['YamlComposer.Layer']
         for idx, layer in enumerate(self._layers[1:] + [self._layers[0]], 1):
             last_layer = self._layers[idx - 1]
-            for l in self._add_router(last_layer, layer):
-                all_layers.append(copy.deepcopy(l))
+            all_layers.extend(
+                copy.deepcopy(l) for l in self._add_router(last_layer, layer)
+            )
         all_layers[0] = copy.deepcopy(self._layers[0])
 
         # Frontend should always on the bind role
@@ -189,14 +193,19 @@ class YamlComposer:
         for l_idx, layer in enumerate(all_layers):
             for c_idx, c in enumerate(layer.components):
                 c_name = '%s%d%d' % (c['name'], l_idx, c_idx)
-                args = ['--%s %s' % (a, str(v) if ' ' not in str(v) else ('"%s"' % str(v))) for a, v in c.items() if
-                        a in YamlComposer.comp2args[c['name']] and a != 'yaml_path' and v]
+                args = [
+                    f"""--{a} {str(v) if ' ' not in str(v) else f'"{str(v)}"'}"""
+                    for a, v in c.items()
+                    if a in YamlComposer.comp2args[c['name']]
+                    and a != 'yaml_path'
+                    and v
+                ]
                 if 'yaml_path' in c and c['yaml_path'] is not None:
                     if c['yaml_path'].endswith('.yml') or c['yaml_path'].endswith('.yaml'):
-                        args.append('--yaml_path /%s_yaml' % c_name)
-                        config_dict['%s_yaml' % c_name] = {'file': c['yaml_path']}
+                        args.append(f'--yaml_path /{c_name}_yaml')
+                        config_dict[f'{c_name}_yaml'] = {'file': c['yaml_path']}
                     else:
-                        args.append('--yaml_path %s' % c['yaml_path'])
+                        args.append(f"--yaml_path {c['yaml_path']}")
 
                 if l_idx + 1 < len(all_layers):
                     next_layer = all_layers[l_idx + 1]
@@ -204,31 +213,35 @@ class YamlComposer:
                 else:
                     next_layer = all_layers[0]
                     _l_idx = 0
-                host_out_name = ''
-                for _c_idx, _c in enumerate(next_layer.components):
-                    if _c['port_in'] == c['port_out']:
-                        host_out_name = '%s%d%d' % (_c['name'], _l_idx, _c_idx)
-                        break
-
-                if l_idx - 1 >= 0:
+                host_out_name = next(
+                    (
+                        '%s%d%d' % (_c['name'], _l_idx, _c_idx)
+                        for _c_idx, _c in enumerate(next_layer.components)
+                        if _c['port_in'] == c['port_out']
+                    ),
+                    '',
+                )
+                if l_idx >= 1:
                     last_layer = all_layers[l_idx - 1]
                     _l_idx = l_idx - 1
                 else:
                     last_layer = all_layers[-1]
                     _l_idx = len(all_layers) - 1
 
-                host_in_name = ''
-                for _c_idx, _c in enumerate(last_layer.components):
-                    if _c['port_out'] == c['port_in']:
-                        host_in_name = '%s%d%d' % (_c['name'], _l_idx, _c_idx)
-                        break
-
+                host_in_name = next(
+                    (
+                        '%s%d%d' % (_c['name'], _l_idx, _c_idx)
+                        for _c_idx, _c in enumerate(last_layer.components)
+                        if _c['port_out'] == c['port_in']
+                    ),
+                    '',
+                )
                 if 'BIND' not in c['socket_out']:
-                    args.append('--host_out %s' % host_out_name)
+                    args.append(f'--host_out {host_out_name}')
                 if 'BIND' not in c['socket_in']:
-                    args.append('--host_in %s' % host_in_name)
+                    args.append(f'--host_in {host_in_name}')
 
-                cmd = '%s %s' % (YamlComposer.comp2file[c['name']], ' '.join(args))
+                cmd = f"{YamlComposer.comp2file[c['name']]} {' '.join(args)}"
                 swarm_lines['services'][c_name] = CommentedMap({
                     'image': c['image'] or docker_img,
                     'command': cmd,
@@ -245,8 +258,8 @@ class YamlComposer:
                     })
 
                 if 'yaml_path' in c and c['yaml_path'] is not None \
-                        and (c['yaml_path'].endswith('.yml') or c['yaml_path'].endswith('.yaml')):
-                    swarm_lines['services'][c_name]['configs'] = ['%s_yaml' % c_name]
+                            and (c['yaml_path'].endswith('.yml') or c['yaml_path'].endswith('.yaml')):
+                    swarm_lines['services'][c_name]['configs'] = [f'{c_name}_yaml']
 
                 if c['name'] == 'Frontend':
                     swarm_lines['services'][c_name]['ports'] = ['%d:%d' % (c['grpc_port'], c['grpc_port'])]
@@ -275,10 +288,15 @@ class YamlComposer:
                 for _ in range(rep_c):
                     cmd = YamlComposer.comp2file[c['name']]
                     args = ' '.join(
-                        ['--%s %s' % (a, str(v) if ' ' not in str(v) else ('"%s"' % str(v))) for a, v in c.items() if
-                         a in YamlComposer.comp2args[c['name']] and v])
-                    shell_lines.append('gnes %s %s %s &' % (
-                        cmd, args, '>> %s 2>&1' % log_redirect if log_redirect else ''))
+                        [
+                            f"""--{a} {str(v) if ' ' not in str(v) else f'"{str(v)}"'}"""
+                            for a, v in c.items()
+                            if a in YamlComposer.comp2args[c['name']] and v
+                        ]
+                    )
+                    shell_lines.append(
+                        f"gnes {cmd} {args} {f'>> {log_redirect} 2>&1' if log_redirect else ''} &"
+                    )
 
         with resource_stream('gnes', '/'.join(('resources', 'compose', 'gnes-shell.sh'))) as r:
             return r.read().decode().replace('{{gnes-template}}', '\n'.join(shell_lines)).strip()
@@ -299,31 +317,32 @@ class YamlComposer:
                             p = '((%s%s))' if c['name'] == 'Router' else '(%s%s)'
                             p1 = '((%s%s))' if c1['name'] == 'Router' else '(%s%s)'
                             for j1 in range(YamlComposer.Layer.get_value(c1, 'replicas')):
-                                _id, _id1 = '%s%s%s' % (last_layer.layer_id, c_idx, j), '%s%s%s' % (
-                                    layer.layer_id, c1_idx, j1)
+                                _id, _id1 = f'{last_layer.layer_id}{c_idx}{j}', f'{layer.layer_id}{c1_idx}{j1}'
                                 conn_type = (
                                         c['socket_out'].split('_')[0] + '/' + c1['socket_in'].split('_')[0]).lower()
-                                s_id = '%s%s' % (c_idx if len(last_layer.components) > 1 else '',
-                                                 j if YamlComposer.Layer.get_value(c, 'replicas') > 1 else '')
-                                s1_id = '%s%s' % (c1_idx if len(layer.components) > 1 else '',
-                                                  j1 if YamlComposer.Layer.get_value(c1, 'replicas') > 1 else '')
+                                s_id = f"{c_idx if len(last_layer.components) > 1 else ''}{j if YamlComposer.Layer.get_value(c, 'replicas') > 1 else ''}"
+                                s1_id = f"{c1_idx if len(layer.components) > 1 else ''}{j1 if YamlComposer.Layer.get_value(c1, 'replicas') > 1 else ''}"
                                 mermaid_graph.append(
                                     '\t%s%s%s-- %s -->%s%s%s' % (
                                         c['name'], _id, p % (c['name'], s_id), conn_type, c1['name'], _id1,
                                         p1 % (c1['name'], s1_id)))
-                                cls_dict[c['name'] + 'CLS'].add('%s%s' % (c['name'], _id))
-                                cls_dict[c1['name'] + 'CLS'].add('%s%s' % (c1['name'], _id1))
-                # if len(last_layer.components) > 1:
-                #     self.mermaid_graph.append('\tend')
+                                cls_dict[c['name'] + 'CLS'].add(f"{c['name']}{_id}")
+                                cls_dict[c1['name'] + 'CLS'].add(f"{c1['name']}{_id1}")
+                        # if len(last_layer.components) > 1:
+                        #     self.mermaid_graph.append('\tend')
 
         style = ['classDef FrontendCLS fill:#FFE0E0,stroke:#FFE0E0,stroke-width:1px;',
                  'classDef EncoderCLS fill:#FFDAAF,stroke:#FFDAAF,stroke-width:1px;',
                  'classDef IndexerCLS fill:#FFFBC1,stroke:#FFFBC1,stroke-width:1px;',
                  'classDef RouterCLS fill:#C9E8D2,stroke:#C9E8D2,stroke-width:1px;',
                  'classDef PreprocessorCLS fill:#CEEEEF,stroke:#CEEEEF,stroke-width:1px;']
-        class_def = ['class %s %s;' % (','.join(v), k) for k, v in cls_dict.items()]
+        class_def = [f"class {','.join(v)} {k};" for k, v in cls_dict.items()]
         mermaid_str = '\n'.join(
-            ['graph %s' % ('LR' if mermaid_leftright else 'TD')] + mermaid_graph + style + class_def)
+            [f"graph {'LR' if mermaid_leftright else 'TD'}"]
+            + mermaid_graph
+            + style
+            + class_def
+        )
         return mermaid_str.strip()
 
     @staticmethod
@@ -340,7 +359,7 @@ class YamlComposer:
             if content and f:
                 with f as fp:
                     fp.write(content)
-                    self.logger.info('generated content is written to %s' % f)
+                    self.logger.info(f'generated content is written to {f}')
 
         all_layers = self.build_layers()
         cmds = {
@@ -412,7 +431,7 @@ class YamlComposer:
             rule3()
             router_layers[0].components[0]['socket_out'] = str(SocketType.PUB_BIND)
             router_layers[0].components[0]['yaml_path'] = '"!PublishRouter {parameters: {num_part: %d}}"' \
-                                                          % len(layer.components)
+                                                              % len(layer.components)
             for c in layer.components:
                 c['socket_in'] = str(SocketType.SUB_CONNECT)
 
@@ -553,7 +572,7 @@ class YamlComposer:
                 elif income == 'sub':
                     rule2()
                 else:
-                    raise NotImplementedError('replica type: %s is not recognized!' % income)
+                    raise NotImplementedError(f'replica type: {income} is not recognized!')
             elif layer.is_heto_single_component:
                 # 1-to-(1)&(1)&(1)
                 rule4()
@@ -577,7 +596,7 @@ class YamlComposer:
                     # (N)-to-1 with a sync barrier
                     rule3()
                 else:
-                    raise NotImplementedError('replica type: %s is not recognized!' % last_income)
+                    raise NotImplementedError(f'replica type: {last_income} is not recognized!')
             elif layer.is_homo_multi_component:
                 # (N)-to-(N)
                 # need a router anyway
@@ -595,7 +614,7 @@ class YamlComposer:
                 elif income == 'sub':
                     rule10()
                 else:
-                    raise NotImplementedError('replica type: %s is not recognized!' % last_income)
+                    raise NotImplementedError(f'replica type: {last_income} is not recognized!')
         elif last_layer.is_heto_single_component:
             rule8()
         else:
@@ -609,10 +628,9 @@ def parse_http_data(data, args):
         return '<h1>Bad POST request</h1> your POST request does not contain "yaml-config" field!', 406
     try:
         args.yaml_path = io.StringIO(data['yaml-config'])
-        if data.get('mermaid_direction', 'top-down').lower() == 'left-right':
-            args.mermaid_leftright = True
-        else:
-            args.mermaid_leftright = False
+        args.mermaid_leftright = (
+            data.get('mermaid_direction', 'top-down').lower() == 'left-right'
+        )
         if 'docker-image' in data:
             args.docker_img = data['docker-image']
         else:

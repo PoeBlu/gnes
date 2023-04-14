@@ -347,9 +347,9 @@ class TestProto(unittest.TestCase):
             '--socket_in', str(SocketType.PULL_CONNECT)
         ])
         # 10 chunks in each doc, dimension of chunk embedding is (5, 2)
-        with RouterService(args), ZmqClient(c_args) as c1:
+        with (RouterService(args), ZmqClient(c_args) as c1):
             msg = gnes_pb2.Message()
-            for i in range(10):
+            for _ in range(10):
                 c = msg.request.search.query.chunks.add()
                 c.embedding.CopyFrom(array2blob(np.random.random([5, 2])))
             msg.envelope.num_part.extend([1, 3])
@@ -362,9 +362,9 @@ class TestProto(unittest.TestCase):
             for i in range(10):
                 self.assertEqual(r.request.search.query.chunks[i].embedding.shape, [5, 6])
 
-            for j in range(1, 4):
+            for _ in range(1, 4):
                 d = msg.request.index.docs.add()
-                for k in range(10):
+                for _ in range(10):
                     c = d.chunks.add()
                     c.embedding.CopyFrom(array2blob(np.random.random([5, 2])))
 
@@ -388,9 +388,9 @@ class TestProto(unittest.TestCase):
             '--socket_in', str(SocketType.PULL_CONNECT)
         ])
         # 10 chunks in each doc, dimension of chunk embedding is (5, 2)
-        with RouterService(args), ZmqClient(c_args) as c1:
+        with (RouterService(args), ZmqClient(c_args) as c1):
             msg = gnes_pb2.Message()
-            for i in range(10):
+            for _ in range(10):
                 c = msg.request.search.query.chunks.add()
                 c.embedding.CopyFrom(array2blob(np.random.random([5, 2])))
             msg.envelope.num_part.extend([1, 3])
@@ -403,9 +403,9 @@ class TestProto(unittest.TestCase):
             for i in range(10):
                 self.assertEqual(r.request.search.query.chunks[i].embedding.shape, [5, 2])
 
-            for j in range(1, 4):
+            for _ in range(1, 4):
                 d = msg.request.index.docs.add()
-                for k in range(10):
+                for _ in range(10):
                     c = d.chunks.add()
                     c.embedding.CopyFrom(array2blob(np.random.random([5, 2])))
 

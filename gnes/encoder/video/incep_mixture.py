@@ -117,7 +117,7 @@ class IncepMixtureEncoder(BaseVideoEncoder):
             return end_points_[self.select_layer]
 
         if len(img) <= self.batch_size:
-            v = [_ for _ in _encode1(self, img)]
+            v = list(_encode1(self, img))
         else:
             v = [_ for vi in _encode1(self, img) for _ in vi]
 

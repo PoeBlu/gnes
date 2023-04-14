@@ -32,9 +32,9 @@ class PoolingEncoder(BaseNumericEncoder):
         valid_backends = {'tensorflow', 'numpy', 'pytorch', 'torch'}
 
         if pooling_strategy not in valid_poolings:
-            raise ValueError('"pooling_strategy" must be one of %s' % valid_poolings)
+            raise ValueError(f'"pooling_strategy" must be one of {valid_poolings}')
         if backend not in valid_backends:
-            raise ValueError('"backend" must be one of %s' % valid_backends)
+            raise ValueError(f'"backend" must be one of {valid_backends}')
         self.pooling_strategy = pooling_strategy
         self.backend = backend
 

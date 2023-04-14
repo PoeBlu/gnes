@@ -12,8 +12,7 @@ def extract_audio(video_bytes):
     for raw_bytes in video_bytes:
         audio = get_audio(raw_bytes, sample_rate, audio_interval, get_video_length_from_raw(raw_bytes))
         audios.append(audio)
-    audios = [slice for audio in audios for slice in audio]
-    return audios
+    return [slice for audio in audios for slice in audio]
 
 
 class TestMfccEncoder(unittest.TestCase):

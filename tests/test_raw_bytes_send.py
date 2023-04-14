@@ -37,10 +37,10 @@ class TestSqueezedSendRecv(unittest.TestCase):
             self.assertEqual(r_msg.request.index.docs[0].raw_bytes, d.raw_bytes)
 
     def test_send_recv_raw_bytes(self):
-        with ZmqClient(self.c1_args) as c1, ZmqClient(self.c2_args) as c2:
+        with (ZmqClient(self.c1_args) as c1, ZmqClient(self.c2_args) as c2):
             msg = gnes_pb2.Message()
             msg.envelope.client_id = c1.args.identity
-            for j in range(random.randint(10, 20)):
+            for _ in range(random.randint(10, 20)):
                 d = msg.request.index.docs.add()
                 d.raw_bytes = b'a' * random.randint(100, 1000)
             raw_bytes = copy.deepcopy([d.raw_bytes for d in msg.request.index.docs])
@@ -64,10 +64,10 @@ class TestSqueezedSendRecv(unittest.TestCase):
     def build_msgs(self):
         all_msgs = []
         num_msg = 20
-        for j in range(num_msg):
+        for _ in range(num_msg):
             msg = gnes_pb2.Message()
             msg.envelope.client_id = 'abc'
-            for j in range(random.randint(10, 20)):
+            for _ in range(random.randint(10, 20)):
                 d = msg.request.index.docs.add()
                 # each doc is about 1MB to 10MB
                 d.raw_bytes = b'a' * random.randint(1000000, 10000000)
@@ -79,7 +79,7 @@ class TestSqueezedSendRecv(unittest.TestCase):
         num_msg = 20
         random.seed(seed)
         np.random.seed(seed)
-        for j in range(num_msg):
+        for _ in range(num_msg):
             msg = gnes_pb2.Message()
             msg.envelope.client_id = 'abc'
             for _ in range(random.randint(10, 20)):

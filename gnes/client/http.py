@@ -42,7 +42,7 @@ class HttpClient:
 
         async def general_handler(request, parser, *args, **kwargs):
             try:
-                data = dict()
+                data = {}
                 # # Option 1: uploading streaming chunk data
                 # data = b""
                 # async for chunk in request.content.iter_any():
@@ -53,7 +53,7 @@ class HttpClient:
                 post_data = await request.post()
                 if 'query' in post_data.keys():
                     _file = post_data.get('query')
-                    self.logger.info('query request from input file: %s' % _file.filename)
+                    self.logger.info(f'query request from input file: {_file.filename}')
                     data['query'] = _file.file.read()
                 elif 'docs' in post_data.keys():
                     files = post_data.getall('docs')
@@ -64,8 +64,14 @@ class HttpClient:
                 resp = await loop.run_in_executor(
                     executor,
                     stub_call,
-                    parser([d for d in data.get('docs')] if hasattr(data, 'docs')
-                           else data.get('query'), *args, **kwargs))
+                    parser(
+                        list(data.get('docs'))
+                        if hasattr(data, 'docs')
+                        else data.get('query'),
+                        *args,
+                        **kwargs
+                    ),
+                )
                 self.logger.info('send back to user')
                 return web.Response(body=json.dumps({'result': resp, 'meta': None}, ensure_ascii=False),
                                     status=200,
@@ -97,11 +103,9 @@ class HttpClient:
             res_f = list(stub.StreamCall(req))[-1]
             return json.loads(MessageToJson(res_f))
 
-        with grpc.insecure_channel(
-                '%s:%s' % (self.args.grpc_host, self.args.grpc_port),
-                options=[('grpc.max_send_message_length', self.args.max_message_size),
-                         ('grpc.max_receive_message_length', self.args.max_message_size),
-                         ('grpc.keepalive_timeout_ms', 100 * 1000)]) as channel:
+        with grpc.insecure_channel(f'{self.args.grpc_host}:{self.args.grpc_port}', options=[('grpc.max_send_message_length', self.args.max_message_size),
+                             ('grpc.max_receive_message_length', self.args.max_message_size),
+                             ('grpc.keepalive_timeout_ms', 100 * 1000)]) as channel:
             stub = gnes_pb2_grpc.GnesRPCStub(channel)
             loop.run_until_complete(init(loop))
             loop.run_forever()

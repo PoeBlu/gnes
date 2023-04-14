@@ -36,15 +36,14 @@ class RouterService(BS):
 
     @handler.register(NotImplementedError)
     def _handler_default(self, msg: 'gnes_pb2.Message'):
-        if isinstance(self._model, BaseReduceRouter):
-            req_id = msg.envelope.request_id
-            self._pending[req_id].append(msg)
-            num_req = len(self._pending[req_id])
-
-            if self._is_msg_complete(msg, num_req):
-                prev_msgs = self._pending.pop(req_id)
-                return self._model.apply(msg, prev_msgs)
-            else:
-                raise BlockMessage
-        else:
+        if not isinstance(self._model, BaseReduceRouter):
             return self._model.apply(msg)
+        req_id = msg.envelope.request_id
+        self._pending[req_id].append(msg)
+        num_req = len(self._pending[req_id])
+
+        if self._is_msg_complete(msg, num_req):
+            prev_msgs = self._pending.pop(req_id)
+            return self._model.apply(msg, prev_msgs)
+        else:
+            raise BlockMessage

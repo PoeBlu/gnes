@@ -72,7 +72,7 @@ class StreamingClient(GrpcClient):
             except queue.Empty:
                 continue
             except Exception as e:
-                print('exception: %s' % str(e))
+                print(f'exception: {str(e)}')
                 break
 
     @handler.register(NotImplementedError)

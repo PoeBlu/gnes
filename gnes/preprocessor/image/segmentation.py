@@ -101,5 +101,4 @@ class SegmentPreprocessor(SizedPreprocessor):
         y2 = min(chunk[3], image[3])
 
         overlap_area = max(0, x2 - x1) * max(0, y2 - y1)
-        iou = overlap_area / (chunk_area + image_area - overlap_area)
-        return iou
+        return overlap_area / (chunk_area + image_area - overlap_area)

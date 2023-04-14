@@ -74,7 +74,7 @@ class HashEncoder(BaseNumericEncoder):
         return np.argmax(-dist, axis=-1).astype(np.uint32)
 
     def ran_gen(self):
-        self.logger.info('hash functions with %s' % self.method)
+        self.logger.info(f'hash functions with {self.method}')
         if self.method == 'product_uniform':
             return np.random.uniform(-1, 1, size=(self.x, self.num_bits)
                                      ).astype(np.float32)
@@ -98,7 +98,7 @@ class HashEncoder(BaseNumericEncoder):
                 out = np.greater(np.matmul(vecs[:, i, :], self.hash_cores[i]), 0)
                 ret.append(np.sum(out * self.proj, axis=1, keepdims=1))
             return np.concatenate(ret, axis=1).astype(np.uint32)
-        elif self.method == 'uniform' or self.method == 'ortho_uniform':
+        elif self.method in ['uniform', 'ortho_uniform']:
             for i in range(self.num_bytes):
                 out = np.greater(np.matmul(vecs, self.hash_cores[i]), 0)
                 ret.append(np.sum(out * self.proj, axis=1, keepdims=1))

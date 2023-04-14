@@ -97,16 +97,12 @@ def progressbar(i, prefix="", suffix="", count=100, size=60):
 def get_first_available_gpu():
     try:
         import GPUtil
-        r = GPUtil.getAvailable(order='random',
-                                maxMemory=0.5,
-                                maxLoad=0.5,
-                                limit=1)
-        if r:
+        if r := GPUtil.getAvailable(
+            order='random', maxMemory=0.5, maxLoad=0.5, limit=1
+        ):
             return r[0]
         raise ValueError
-    except ImportError:
-        return -1
-    except ValueError:
+    except (ImportError, ValueError):
         return -1
 
 
@@ -191,24 +187,16 @@ def get_perm(L, m):
     for _ in range(n):
         ind = 0
         for i in range(m):
-            if i % 2 == 0:
-                start, direction = 0, 1
-            else:
-                start, direction = n - 1, -1
+            start, direction = (0, 1) if i % 2 == 0 else (n - 1, -1)
             while F[i, start] == 1:
                 start += direction
-            if (ind + L[i, start] < avg) or (direction == 1):
-                ind += L[i, start]
-                F[i, start] = 1
-                reranked.append(R[i, start])
-            else:
+            if ind + L[i, start] >= avg and direction != 1:
                 start, direction = n - 1, -1
                 while F[i, start] == 1:
                     start += direction
-                ind += L[i, start]
-                F[i, start] = 1
-                reranked.append(R[i, start])
-
+            ind += L[i, start]
+            F[i, start] = 1
+            reranked.append(R[i, start])
     return reranked
 
 
@@ -269,8 +257,9 @@ def set_logger(context, verbose=False):
     if not logger.handlers:
         logger.setLevel(logging.DEBUG if verbose else logging.INFO)
         formatter = ColoredFormatter(
-            '%(levelname)-.1s:' + context + ':[%(filename).3s:%(funcName).3s:%(lineno)3d]:%(message)s', datefmt=
-            '%m-%d %H:%M:%S')
+            f'%(levelname)-.1s:{context}:[%(filename).3s:%(funcName).3s:%(lineno)3d]:%(message)s',
+            datefmt='%m-%d %H:%M:%S',
+        )
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.DEBUG if verbose else logging.INFO)
         console_handler.setFormatter(formatter)
@@ -286,17 +275,17 @@ class NTLogger:
         self.verbose = verbose
 
     def info(self, msg, **kwargs):
-        print('I:%s:%s' % (self.context, msg), flush=True)
+        print(f'I:{self.context}:{msg}', flush=True)
 
     def debug(self, msg, **kwargs):
         if self.verbose:
-            print('D:%s:%s' % (self.context, msg), flush=True)
+            print(f'D:{self.context}:{msg}', flush=True)
 
     def error(self, msg, **kwargs):
-        print('E:%s:%s' % (self.context, msg), flush=True)
+        print(f'E:{self.context}:{msg}', flush=True)
 
     def warning(self, msg, **kwargs):
-        print('W:%s:%s' % (self.context, msg), flush=True)
+        print(f'W:{self.context}:{msg}', flush=True)
 
 
 class TimeContext:
@@ -329,10 +318,7 @@ class Tokenizer:
             self._jieba.load_userdict(dict_path)
 
     def tokenize(self, text, with_position=False):
-        if not with_position:
-            return self._jieba.lcut(text)  # resulted token list
-        else:
-            return self._jieba.tokenize(text)  # triple data consisting of (token, start_pos, end_pos)
+        return self._jieba.tokenize(text) if with_position else self._jieba.lcut(text)
 
 
 def batch_iterator(data: Union[Iterator[Any], List[Any], np.ndarray], batch_size: int, axis: int = 0) -> Iterator[Any]:
@@ -356,22 +342,21 @@ def batch_iterator(data: Union[Iterator[Any], List[Any], np.ndarray], batch_size
     elif isinstance(data, Iterator):
         # as iterator, there is no way to know the length of it
         while True:
-            chunk = tuple(islice(data, batch_size))
-            if not chunk:
+            if chunk := tuple(islice(data, batch_size)):
+                yield chunk
+            else:
                 return
-            yield chunk
     else:
-        raise TypeError('unsupported type: %s' % type(data))
+        raise TypeError(f'unsupported type: {type(data)}')
 
 
 def get_size(data: Union[Iterator[Any], List[Any], np.ndarray], axis: int = 0) -> int:
     if isinstance(data, np.ndarray):
-        total_size = data.shape[axis]
+        return data.shape[axis]
     elif hasattr(data, '__len__'):
-        total_size = len(data)
+        return len(data)
     else:
-        total_size = None
-    return total_size
+        return None
 
 
 def pooling_simple(data_array, pooling_strategy):
@@ -384,7 +369,9 @@ def pooling_simple(data_array, pooling_strategy):
             (sum(data_array) / (len(data_array) + 1e-10),
              max(data_array) / (len(data_array) + 1e-10)), axis=0)
     else:
-        raise ValueError('pooling_strategy: %s has not been implemented' % pooling_strategy)
+        raise ValueError(
+            f'pooling_strategy: {pooling_strategy} has not been implemented'
+        )
     return _pooled_data
 
 
@@ -407,7 +394,9 @@ def pooling_torch(data_tensor, mask_tensor, pooling_strategy):
             (masked_reduce_mean(data_tensor, mask_tensor),
              masked_reduce_max(data_tensor, mask_tensor)), dim=1)
     else:
-        raise ValueError('pooling_strategy: %s has not been implemented' % pooling_strategy)
+        raise ValueError(
+            f'pooling_strategy: {pooling_strategy} has not been implemented'
+        )
 
     return output_tensor
 
@@ -479,10 +468,7 @@ def batching(func: Callable[[Any], np.ndarray] = None, *,
 
         return arg_wrapper
 
-    if func:
-        return _batching(func)
-    else:
-        return _batching
+    return _batching(func) if func else _batching
 
 
 def _get_yaml():
@@ -495,10 +481,7 @@ def parse_arg(v: str):
     if v.startswith('[') and v.endswith(']'):
         # function args must be immutable tuples not list
         tmp = v.replace('[', '').replace(']', '').strip().split(',')
-        if len(tmp) > 0:
-            return [parse_arg(vv.strip()) for vv in tmp]
-        else:
-            return []
+        return [parse_arg(vv.strip()) for vv in tmp] if tmp else []
     try:
         v = int(v)  # parse int parameter
     except ValueError:
@@ -521,7 +504,7 @@ def countdown(t: int, logger=None, reason: str = 'I am blocking this thread'):
         sys.stdout.flush()
     while t > 0:
         t -= 1
-        msg = '%ss left: %s' % (colored('%3d' % t, 'yellow'), reason)
+        msg = f"{colored('%3d' % t, 'yellow')}s left: {reason}"
         if logger:
             logger.info(msg)
         else:
@@ -540,7 +523,7 @@ def as_numpy_array(func, dtype=np.float32):
         if r_type in {'ndarray', 'EagerTensor', 'Tensor', 'list'}:
             return np.array(r, dtype)
         else:
-            raise TypeError('unrecognized type %s: %s' % (r_type, type(r)))
+            raise TypeError(f'unrecognized type {r_type}: {type(r)}')
 
     return arg_wrapper
 
@@ -552,7 +535,7 @@ def train_required(func):
             if self.is_trained:
                 return func(self, *args, **kwargs)
             else:
-                raise RuntimeError('training is required before calling "%s"' % func.__name__)
+                raise RuntimeError(f'training is required before calling "{func.__name__}"')
         else:
             raise AttributeError('%r has no attribute "is_trained"' % self)
 
@@ -560,22 +543,26 @@ def train_required(func):
 
 
 def load_contrib_module():
-    if not os.getenv('GNES_CONTRIB_MODULE_IS_LOADING'):
-        import importlib.util
+    if os.getenv('GNES_CONTRIB_MODULE_IS_LOADING'):
+        return
+    import importlib.util
 
-        contrib = os.getenv('GNES_CONTRIB_MODULE')
-        os.environ['GNES_CONTRIB_MODULE_IS_LOADING'] = 'true'
+    contrib = os.getenv('GNES_CONTRIB_MODULE')
+    os.environ['GNES_CONTRIB_MODULE_IS_LOADING'] = 'true'
 
-        modules = []
+    modules = []
 
-        if contrib:
+    if contrib:
+        default_logger.info(
+            f'find a value in $GNES_CONTRIB_MODULE={contrib}, will load them as external modules'
+        )
+        for p in contrib.split(','):
+            m = PathImporter.add_modules(p)
+            modules.append(m)
             default_logger.info(
-                'find a value in $GNES_CONTRIB_MODULE=%s, will load them as external modules' % contrib)
-            for p in contrib.split(','):
-                m = PathImporter.add_modules(p)
-                modules.append(m)
-                default_logger.info('successfully registered %s class, you can now use it via yaml.' % m)
-        return modules
+                f'successfully registered {m} class, you can now use it via yaml.'
+            )
+    return modules
 
 
 class PathImporter:

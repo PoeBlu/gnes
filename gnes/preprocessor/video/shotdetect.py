@@ -67,11 +67,10 @@ class ShotDetectPreprocessor(BaseVideoPreprocessor):
 
         shot_bounds = detect_peak_boundary(dists, self.detect_method, **self._detector_kwargs)
 
-        shots = []
-        for ci in range(0, len(shot_bounds) - 1):
-            shots.append(frames[shot_bounds[ci]:shot_bounds[ci + 1]].copy())
-
-        return shots
+        return [
+            frames[shot_bounds[ci] : shot_bounds[ci + 1]].copy()
+            for ci in range(len(shot_bounds) - 1)
+        ]
 
     def apply(self, doc: 'gnes_pb2.Document') -> None:
         super().apply(doc)

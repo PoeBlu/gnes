@@ -51,7 +51,6 @@ class QuantizerEncoder(BaseBinaryEncoder):
         if self.upper_bound < self.lower_bound:
             raise ValueError("upper bound is smaller than lower bound")
 
-        centroids = []
         num_sample_per_dim = np.ceil(pow(self.num_clusters, 1 / self.dim_per_byte)).astype(np.uint8)
         if self.partition_method == 'average':
             axis_point = np.linspace(self.lower_bound, self.upper_bound, num=num_sample_per_dim+1,
@@ -63,8 +62,7 @@ class QuantizerEncoder(BaseBinaryEncoder):
         else:
             raise NotImplementedError
 
-        for item in product(*coordinates):
-            centroids.append(list(item))
+        centroids = [list(item) for item in product(*coordinates)]
         return centroids[:self.num_clusters]
 
     @batching

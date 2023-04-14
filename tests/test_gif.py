@@ -11,7 +11,7 @@ class TestPartition(unittest.TestCase):
     def setUp(self):
         self.dirname = os.path.dirname(__file__)
         self.p3_name = 'pipe-gif'
-        self.pipeline_path = os.path.join(self.dirname, 'yaml/%s.yml' % self.p3_name)
+        self.pipeline_path = os.path.join(self.dirname, f'yaml/{self.p3_name}.yml')
         self.ffmpeg_yaml_path = os.path.join(self.dirname, 'yaml/preprocessor-ffmpeg2.yml')
         self.video_path = os.path.join(self.dirname, 'videos')
         self.video_bytes = [open(os.path.join(self.video_path, _), 'rb').read()

@@ -36,7 +36,7 @@ class bar(BaseEncoder):
 
     @batching(batch_size=get_batch_size)
     def train(self, data):
-        print('train: %s' % data)
+        print(f'train: {data}')
 
 
 class TestBatching(unittest.TestCase):

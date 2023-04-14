@@ -46,7 +46,9 @@ class FaissIndexer(BCI):
                 raise IsADirectoryError('"data_path" must be a file path, not a directory')
             self._faiss_index = faiss.read_index(self.data_path)
         except (RuntimeError, FileNotFoundError, IsADirectoryError):
-            self.logger.warning('fail to load model from %s, will init an empty one' % self.data_path)
+            self.logger.warning(
+                f'fail to load model from {self.data_path}, will init an empty one'
+            )
             self._faiss_index = faiss.index_factory(self.num_dim, self.index_key) if self.num_dim > 0 else None
 
     @BCI.update_helper_indexer
@@ -72,10 +74,8 @@ class FaissIndexer(BCI):
         score, ids = self._faiss_index.search(keys, top_k)
         ret = []
         for _id, _score in zip(ids, score):
-            ret_i = []
             chunk_info = self.helper_indexer.query(_id)
-            for c_info, _score_i in zip(chunk_info, _score):
-                ret_i.append((*c_info, _score_i))
+            ret_i = [(*c_info, _score_i) for c_info, _score_i in zip(chunk_info, _score)]
             ret.append(ret_i)
 
         return ret

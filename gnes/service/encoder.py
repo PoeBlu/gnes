@@ -39,7 +39,7 @@ class EncoderService(BS):
 
         for d in docs:
             if not d.chunks:
-                self.logger.warning('document (doc_id=%s) contains no chunks!' % d.doc_id)
+                self.logger.warning(f'document (doc_id={d.doc_id}) contains no chunks!')
                 continue
 
             for c in d.chunks:
@@ -49,7 +49,8 @@ class EncoderService(BS):
                     contents.append(blob2array(c.blob))
                 else:
                     self.logger.warning(
-                        'chunk content is in type: %s, dont kow how to handle that, ignored' % c.WhichOneof('content'))
+                        f"chunk content is in type: {c.WhichOneof('content')}, dont kow how to handle that, ignored"
+                    )
                 chunks.append(c)
 
         if do_encoding and contents:
@@ -108,6 +109,6 @@ class EncoderService(BS):
             try:
                 r = v()
             except Exception as ex:
-                r = 'fail to get the value, reason: %s' % ex
+                r = f'fail to get the value, reason: {ex}'
             debug_info[k] = r
         self.logger.info(pformat(debug_info))

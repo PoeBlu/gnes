@@ -40,7 +40,7 @@ class Word2VecEncoder(BaseTextEncoder):
         count = 0
         self.word2vec_df = {}
         with open(self.model_dir, 'r') as f:
-            for line in f.readlines():
+            for line in f:
                 line = line.strip().split(' ')
                 if count < self.skiprows:
                     count += 1

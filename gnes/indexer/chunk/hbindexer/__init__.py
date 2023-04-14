@@ -51,7 +51,9 @@ class HBIndexer(BCI):
                 raise IsADirectoryError('"data_path" must be a file path, not a directory')
             self.hbindexer.load(self.data_path)
         except (FileNotFoundError, IsADirectoryError):
-            self.logger.warning('fail to load model from %s, will create an empty one' % self.data_path)
+            self.logger.warning(
+                f'fail to load model from {self.data_path}, will create an empty one'
+            )
 
     @BCI.update_helper_indexer
     def add(self, keys: List[Tuple[int, Any]], vectors: np.ndarray, weights: List[float], *args, **kwargs):
@@ -104,5 +106,4 @@ class HBIndexer(BCI):
 
     def __getstate__(self):
         self.hbindexer.save(self.data_path)
-        d = super().__getstate__()
-        return d
+        return super().__getstate__()

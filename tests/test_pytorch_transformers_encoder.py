@@ -15,8 +15,7 @@ class TestTorchTransformersEncoder(unittest.TestCase):
         self.test_str = []
         with open(os.path.join(dirname, 'sonnets_small.txt')) as f:
             for line in f:
-                line = line.strip()
-                if line:
+                if line := line.strip():
                     self.test_str.append(line)
 
     def test_encoding(self):

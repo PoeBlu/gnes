@@ -28,14 +28,14 @@ from ..service.base import build_socket
 class ResponseHandler:
 
     def __init__(self, h: 'ResponseHandler' = None):
-        self.routes = {k: v for k, v in h.routes.items()} if h else {}
+        self.routes = dict(h.routes.items()) if h else {}
         self.logger = set_logger(self.__class__.__name__)
         self._context = None
 
     def register(self, resp_type: Union[List, Tuple, type]):
 
         def decorator(f):
-            if isinstance(resp_type, list) or isinstance(resp_type, tuple):
+            if isinstance(resp_type, (list, tuple)):
                 for t in resp_type:
                     self.routes[t] = f
             else:
@@ -48,8 +48,8 @@ class ResponseHandler:
 
         def get_default_fn(r_type):
             self.logger.warning(
-                'cant find handler for response type: %s, fall back to the default handler'
-                % r_type)
+                f'cant find handler for response type: {r_type}, fall back to the default handler'
+            )
             f = self.routes.get(r_type, self.routes[NotImplementedError])
             return f
 
@@ -64,7 +64,7 @@ class ResponseHandler:
             else:
                 fn = get_default_fn(type(resp))
 
-        self.logger.info('handling response with %s' % fn.__name__)
+        self.logger.info(f'handling response with {fn.__name__}')
         return fn(self._context, resp)
 
 
@@ -99,12 +99,12 @@ class ZmqClient:
         self.ctx.term()
 
     def send_message(self, message: "gnes_pb2.Message", **kwargs):
-        self.logger.debug('send message: %s' % message.envelope)
+        self.logger.debug(f'send message: {message.envelope}')
         _send_message(self.sender, message, **kwargs)
 
     def recv_message(self, **kwargs) -> gnes_pb2.Message:
         r = _recv_message(self.receiver, **kwargs)
-        self.logger.debug('recv a message: %s' % r.envelope)
+        self.logger.debug(f'recv a message: {r.envelope}')
         return r
 
 

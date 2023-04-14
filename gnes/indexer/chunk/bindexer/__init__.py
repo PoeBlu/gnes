@@ -53,7 +53,9 @@ class BIndexer(BCI):
                 raise IsADirectoryError('"data_path" must be a file path, not a directory')
             self.bindexer.load(self.data_path)
         except (FileNotFoundError, IsADirectoryError):
-            self.logger.warning('fail to load model from %s, will create an empty one' % self.data_path)
+            self.logger.warning(
+                f'fail to load model from {self.data_path}, will create an empty one'
+            )
 
     @BCI.update_helper_indexer
     def add(self, keys: List[Tuple[int, Any]], vectors: np.ndarray, weights: List[float], *args,
@@ -96,7 +98,12 @@ class BIndexer(BCI):
 
         result = [[] for _ in range(num_rows)]
 
-        if method == 'nsw':
+        if method == 'force':
+            doc_ids, offsets, weights, dists, q_idx = self.bindexer.force_search(
+                keys, num_rows, top_k)
+            for (i, o, w, d, q) in zip(doc_ids, offsets, weights, dists, q_idx):
+                result[q].append((i, o, self.uint2float_weight(w), d))
+        elif method == 'nsw':
             # find the indexed items with same value
             q_idx, doc_ids, offsets, weights = self.bindexer.find_batch_trie(
                 keys, num_rows)
@@ -106,22 +113,15 @@ class BIndexer(BCI):
             # search the indexed items with similar value
             doc_ids, offsets, weights, dists, q_idx = self.bindexer.nsw_search(
                 keys, num_rows, top_k)
-            for (i, o, w, d, q) in zip(doc_ids, offsets, weights, dists, q_idx):
-                if d == 0:
-                    continue
-                result[q].append((i, o, self.uint2float_weight(w), d))
+            for i, o, w, d, q in zip(doc_ids, offsets, weights, dists, q_idx):
+                if d != 0:
+                    result[q].append((i, o, self.uint2float_weight(w), d))
 
             # get the top-k
             for q in range(num_rows):
                 result[q] = result[q][:top_k]
-        elif method == 'force':
-            doc_ids, offsets, weights, dists, q_idx = self.bindexer.force_search(
-                keys, num_rows, top_k)
-            for (i, o, w, d, q) in zip(doc_ids, offsets, weights, dists, q_idx):
-                result[q].append((i, o, self.uint2float_weight(w), d))
         return result
 
     def __getstate__(self):
         self.bindexer.save(self.data_path)
-        d = super().__getstate__()
-        return d
+        return super().__getstate__()

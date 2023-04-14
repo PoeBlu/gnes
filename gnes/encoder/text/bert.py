@@ -54,10 +54,9 @@ class BertEncoderServer(BaseTextEncoder):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        bert_args = ['-%s' % v for v in args]
+        bert_args = [f'-{v}' for v in args]
         for k, v in kwargs.items():
-            bert_args.append('-%s' % k)
-            bert_args.append(str(v))
+            bert_args.extend((f'-{k}', str(v)))
         self._bert_args = bert_args
 
     def post_init(self):

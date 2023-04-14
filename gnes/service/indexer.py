@@ -36,7 +36,8 @@ class IndexerService(BS):
             self._handler_doc_index(msg)
         else:
             raise ServiceError(
-                'unsupported indexer, dont know how to use %s to handle this message' % self._model.__bases__)
+                f'unsupported indexer, dont know how to use {self._model.__bases__} to handle this message'
+            )
         msg.response.index.status = gnes_pb2.Response.SUCCESS
         self.is_model_changed.set()
 
@@ -45,7 +46,7 @@ class IndexerService(BS):
 
         for d in msg.request.index.docs:
             if not d.chunks:
-                self.logger.warning('document (doc_id=%s) contains no chunks!' % d.doc_id)
+                self.logger.warning(f'document (doc_id={d.doc_id}) contains no chunks!')
                 continue
 
             vecs += [blob2array(c.embedding) for c in d.chunks]
@@ -59,9 +60,11 @@ class IndexerService(BS):
             self.logger.warning('chunks contain no embedded vectors, %the indexer will do nothing')
 
     def _handler_doc_index(self, msg: 'gnes_pb2.Message'):
-        self._model.add([d.doc_id for d in msg.request.index.docs],
-                        [d for d in msg.request.index.docs],
-                        [d.weight for d in msg.request.index.docs])
+        self._model.add(
+            [d.doc_id for d in msg.request.index.docs],
+            list(msg.request.index.docs),
+            [d.weight for d in msg.request.index.docs],
+        )
 
     def _put_result_into_message(self, results, msg: 'gnes_pb2.Message'):
         msg.response.search.ClearField('topk_results')
@@ -74,7 +77,8 @@ class IndexerService(BS):
         from ..indexer.base import BaseChunkIndexer
         if not isinstance(self._model, BaseChunkIndexer):
             raise ServiceError(
-                'unsupported indexer, dont know how to use %s to handle this message' % self._model.__bases__)
+                f'unsupported indexer, dont know how to use {self._model.__bases__} to handle this message'
+            )
 
         results = []
         if not msg.request.search.query.chunks:
@@ -89,11 +93,12 @@ class IndexerService(BS):
         from ..indexer.base import BaseDocIndexer
         if not isinstance(self._model, BaseDocIndexer):
             raise ServiceError(
-                'unsupported indexer, dont know how to use %s to handle this message' % self._model.__bases__)
+                f'unsupported indexer, dont know how to use {self._model.__bases__} to handle this message'
+            )
 
         # check if chunk_indexer and doc_indexer has the same sorting order
         if msg.response.search.is_big_score_similar is not None and \
-                msg.response.search.is_big_score_similar != self._model.is_big_score_similar:
+                    msg.response.search.is_big_score_similar != self._model.is_big_score_similar:
             raise ServiceError(
                 'is_big_score_similar is inconsistent. last topk-list: is_big_score_similar=%s, but '
                 'this indexer: is_big_score_similar=%s' % (

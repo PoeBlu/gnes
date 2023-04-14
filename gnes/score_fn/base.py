@@ -25,9 +25,7 @@ from ..proto import gnes_pb2
 def get_unary_score(value: float, **kwargs):
     score = gnes_pb2.Response.QueryResponse.ScoredResult.Score()
     score.value = value
-    score.explained = json.dumps(
-        dict(value=float(value),
-             **kwargs))
+    score.explained = json.dumps(dict(value=value, **kwargs))
     return score
 
 
@@ -63,7 +61,8 @@ class CombinedScoreFn(BaseScoreFn):
         super().__init__(*args, **kwargs)
         if score_mode not in self.supported_ops:
             raise AttributeError(
-                'score_mode=%s is not supported! must be one of %s' % (score_mode, self.supported_ops.keys()))
+                f'score_mode={score_mode} is not supported! must be one of {self.supported_ops.keys()}'
+            )
         self.score_mode = score_mode
 
     @property
@@ -96,7 +95,8 @@ class ModifierScoreFn(BaseScoreFn):
         super().__init__(*args, **kwargs)
         if modifier not in self.supported_ops:
             raise AttributeError(
-                'modifier=%s is not supported! must be one of %s' % (modifier, self.supported_ops.keys()))
+                f'modifier={modifier} is not supported! must be one of {self.supported_ops.keys()}'
+            )
         self._modifier = modifier
         self._factor = factor
         self._factor_name = factor_name

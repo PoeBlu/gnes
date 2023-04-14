@@ -39,6 +39,8 @@ class TorchvisionEncoder(BaseImageEncoder):
         import torch
         import torchvision.models as models
 
+
+
         class _Model(torch.nn.Module):
             def __init__(self, model_name: str, layers: List[str]):
                 super().__init__()
@@ -50,10 +52,7 @@ class TorchvisionEncoder(BaseImageEncoder):
 
                 if '(' not in layer and ')' not in layer:
                     # this is a shorthand syntax we need to add "(x)" at the end
-                    layer = 'm.%s(x)' % layer
-                else:
-                    pass
-
+                    layer = f'm.{layer}(x)'
                 def layer_fn(x, l, m, torch):
                     return eval(l)
 
@@ -63,6 +62,7 @@ class TorchvisionEncoder(BaseImageEncoder):
                 for l in self.layers:
                     x = l(x)
                 return x
+
 
         os.environ['TORCH_HOME'] = self.model_dir
         self._model = _Model(self.model_name, self.layers)
@@ -78,7 +78,7 @@ class TorchvisionEncoder(BaseImageEncoder):
 
         # padding to ensure that every chunk has the same number of frame
         def _padding(img: List['np.ndarray']):
-            max_lenth = max([len(x) for x in img])
+            max_lenth = max(len(x) for x in img)
             img = [np.concatenate((im, np.zeros((max_lenth - im.shape[0], im.shape[1], im.shape[2], 3), dtype=np.uint8))
                                   , axis=0)
                    if im.shape[0] < max_lenth else im for im in img]
@@ -98,7 +98,7 @@ class TorchvisionEncoder(BaseImageEncoder):
 
             if len(img[0].shape) == 4:
                 img_ = copy.deepcopy(img)
-                img_ = np.concatenate((list(img_[i] for i in range(len(img_)))), axis=0)
+                img_ = np.concatenate([img_[i] for i in range(len(img_))], axis=0)
 
                 img_for_torch = np.array(img_, dtype=np.float32).transpose(0, 3, 1, 2)
             else:

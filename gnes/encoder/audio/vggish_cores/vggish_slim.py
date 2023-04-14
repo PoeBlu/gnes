@@ -115,6 +115,6 @@ def load_vggish_slim_checkpoint(session, checkpoint_path):
                            write_version=1)
     saver.restore(session, checkpoint_path)
 
-    tvs = [v for v in tf.trainable_variables()]
+    tvs = list(tf.trainable_variables())
     for v in tvs:
         print(v.name)

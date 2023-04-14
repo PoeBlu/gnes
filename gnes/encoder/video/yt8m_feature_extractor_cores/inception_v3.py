@@ -407,7 +407,7 @@ def inception_v3_base(inputs,
         net = tf.concat(axis=3, values=[branch_0, branch_1, branch_2, branch_3])
       end_points[end_point] = net
       if end_point == final_endpoint: return net, end_points
-    raise ValueError('Unknown final endpoint %s' % final_endpoint)
+    raise ValueError(f'Unknown final endpoint {final_endpoint}')
 
 
 def inception_v3(inputs,
@@ -550,12 +550,9 @@ def _reduced_kernel_size_for_small_input(input_tensor, kernel_size):
                          tf.minimum(shape[2], kernel_size[1])])
   """
   shape = input_tensor.get_shape().as_list()
-  if shape[1] is None or shape[2] is None:
-    kernel_size_out = kernel_size
-  else:
-    kernel_size_out = [min(shape[1], kernel_size[0]),
-                       min(shape[2], kernel_size[1])]
-  return kernel_size_out
+  return (kernel_size if shape[1] is None or shape[2] is None else
+          [min(shape[1], kernel_size[0]),
+           min(shape[2], kernel_size[1])])
 
 
 inception_v3_arg_scope = inception_utils.inception_arg_scope

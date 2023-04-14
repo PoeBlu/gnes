@@ -79,7 +79,7 @@ extras_dep = {
 
 
 def combine_dep(new_key, base_keys):
-    extras_dep[new_key] = list(set(k for v in base_keys for k in extras_dep[v]))
+    extras_dep[new_key] = list({k for v in base_keys for k in extras_dep[v]})
 
 
 combine_dep('nlp', ['bert', 'flair', 'transformers'])

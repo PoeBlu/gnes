@@ -37,7 +37,7 @@ class FrameSelectPreprocessor(BaseVideoPreprocessor):
                 if len(images) == 0:
                     self.logger.warning("this chunk has no frame!")
                 elif self.sframes == 1:
-                    idx = [int(len(images) / 2)]
+                    idx = [len(images) // 2]
                     chunk.blob.CopyFrom(array2blob(images[idx]))
                 elif self.sframes > 0 and len(images) > self.sframes:
                     if len(images) >= 2 * self.sframes:

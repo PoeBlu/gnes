@@ -19,9 +19,9 @@ import subprocess as sp
 def kwargs_to_cmd_args(kwargs):
     args = []
     for k, v in kwargs.items():
-        args.append('-%s' % k)
+        args.append(f'-{k}')
         if v is not None:
-            args.append('%s' % str(v))
+            args.append(f'{str(v)}')
     return args
 
 
@@ -67,16 +67,14 @@ def run_command(cmd_args,
                 pipe_stderr=False,
                 quiet=False):
     with run_command_async(
-            cmd_args,
-            pipe_stdin=pipe_stdin,
-            pipe_stdout=pipe_stdout,
-            pipe_stderr=pipe_stderr,
-            quiet=quiet) as proc:
+                cmd_args,
+                pipe_stdin=pipe_stdin,
+                pipe_stdout=pipe_stdout,
+                pipe_stderr=pipe_stderr,
+                quiet=quiet) as proc:
         stdout, stderr = proc.communicate(input)
-        retcode = proc.poll()
-
-        if retcode:
-            raise Exception('ffmpeg error: %s' % stderr)
+        if retcode := proc.poll():
+            raise Exception(f'ffmpeg error: {stderr}')
 
         if proc.stdout is not None:
             proc.stdout.close()

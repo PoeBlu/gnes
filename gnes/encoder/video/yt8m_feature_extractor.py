@@ -112,7 +112,7 @@ class YouTube8MFeatureExtractor(BaseVideoEncoder):
                                                       self.inception_size_y)), dtype=np.float32) * 2 / 255. - 1.)
                 for video in data for im in video]
 
-        data = np.stack((list(data[i] for i in range(len(data)))), axis=0)
+        data = np.stack([data[i] for i in range(len(data))], axis=0)
 
         @batching
         def _encode(_, data):

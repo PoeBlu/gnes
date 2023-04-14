@@ -34,7 +34,7 @@ class TestBIndexer(unittest.TestCase):
             os.remove(self.dump_path)
 
     def test_nsw_search(self):
-        fd = BIndexer(self.toy_data.shape[1], data_path=self.dump_path + '_1')
+        fd = BIndexer(self.toy_data.shape[1], data_path=f'{self.dump_path}_1')
         fd.add(self.toy_label, self.toy_data, self.weights)
         self.assertEqual(fd.num_doc, 7)
         self.assertEqual(fd.num_chunks, 7)
@@ -47,7 +47,7 @@ class TestBIndexer(unittest.TestCase):
         self.assertEqual(rs, self.toy_exp)
 
     def test_force_search(self):
-        fd = BIndexer(self.toy_data.shape[1], data_path=self.dump_path + '_2')
+        fd = BIndexer(self.toy_data.shape[1], data_path=f'{self.dump_path}_2')
         fd.add(self.toy_label, self.toy_data, self.weights)
         rs = fd.query(self.toy_query, 2, method='force', normalized_score=False)
         for i in range(len(rs)):
@@ -56,7 +56,7 @@ class TestBIndexer(unittest.TestCase):
         self.assertEqual(rs, self.toy_exp)
 
     def test_dump_load(self):
-        fd = BIndexer(self.toy_data.shape[1], data_path=self.dump_path + '_3')
+        fd = BIndexer(self.toy_data.shape[1], data_path=f'{self.dump_path}_3')
         fd.add(self.toy_label, self.toy_data, self.weights)
         fd.dump()
         fd.close()
@@ -69,4 +69,4 @@ class TestBIndexer(unittest.TestCase):
         fd2.close()
 
         self.assertEqual(rs, self.toy_exp)
-        os.remove(self.dump_path + '_3')
+        os.remove(f'{self.dump_path}_3')

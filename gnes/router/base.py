@@ -116,7 +116,7 @@ class BaseEmbedReduceRouter(BaseReduceRouter):
                     reduced_embedding = array2blob(self.reduce_embedding(accum_msgs, 'index', chunk_idx=j, doc_idx=i))
                     msg.request.index.docs[i].chunks[j].embedding.CopyFrom(reduced_embedding)
         else:
-            self.logger.error('dont know how to handle %s' % msg_type)
+            self.logger.error(f'dont know how to handle {msg_type}')
 
         super().apply(msg, accum_msgs)
 

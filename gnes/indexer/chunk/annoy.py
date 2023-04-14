@@ -51,7 +51,9 @@ class AnnoyIndexer(BCI):
                 raise IsADirectoryError('"data_path" must be a file path, not a directory')
             self._index.load(self.data_path)
         except:
-            self.logger.warning('fail to load model from %s, will create an empty one' % self.data_path)
+            self.logger.warning(
+                f'fail to load model from {self.data_path}, will create an empty one'
+            )
 
     @BCI.update_helper_indexer
     def add(self, keys: List[Tuple[int, Any]], vectors: np.ndarray, weights: List[float], *args, **kwargs):

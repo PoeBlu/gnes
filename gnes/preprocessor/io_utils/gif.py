@@ -54,13 +54,8 @@ def capture_frames(input_fn: str = 'pipe:',
 
         width, height = extract_frame_size(err.decode())
 
-        depth = 3
-        if pix_fmt == 'rgba':
-            depth = 4
-
-        frames = np.frombuffer(out,
-                               np.uint8).reshape([-1, height, width, depth])
-        return frames
+        depth = 4 if pix_fmt == 'rgba' else 3
+        return np.frombuffer(out, np.uint8).reshape([-1, height, width, depth])
 
 
 def encode_video(images: 'np.ndarray', frame_rate: int, pix_fmt: str = 'rgb24'):

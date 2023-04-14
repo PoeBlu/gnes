@@ -42,4 +42,4 @@ class PreprocessorService(BS):
     def _apply(self, d: 'gnes_pb2.Document'):
         self._model.apply(d)
         if not d.chunks:
-            self.logger.warning('document (doc_id=%s) contains no chunks!' % d.doc_id)
+            self.logger.warning(f'document (doc_id={d.doc_id}) contains no chunks!')

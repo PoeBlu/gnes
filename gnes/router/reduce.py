@@ -29,11 +29,15 @@ class DocFillReducer(BaseReduceRouter):
     Ideally, only each doc can only belong to one shard.
     """
     def apply(self, msg: 'gnes_pb2.Message', accum_msgs: List['gnes_pb2.Message'], *args, **kwargs):
-        final_docs = []
-        for idx in range(len(msg.response.search.topk_results)):
-            # get result from all shards, some may return None, we only take the first non-None doc
-            final_docs.append([m.response.search.topk_results[idx] for m in accum_msgs if
-                               m.response.search.topk_results[idx].doc.WhichOneof('raw_data') is not None][0])
+        final_docs = [
+            [
+                m.response.search.topk_results[idx]
+                for m in accum_msgs
+                if m.response.search.topk_results[idx].doc.WhichOneof('raw_data')
+                is not None
+            ][0]
+            for idx in range(len(msg.response.search.topk_results))
+        ]
         msg.response.search.ClearField('topk_results')
         msg.response.search.topk_results.extend(final_docs)
 
@@ -86,14 +90,14 @@ class ConcatEmbedRouter(BaseEmbedReduceRouter):
     """
 
     def reduce_embedding(self, accum_msgs: List['gnes_pb2.Message'], msg_type: str, chunk_idx: int, doc_idx: int):
-        if msg_type == 'query':
-            return np.concatenate([blob2array(m.request.search.query.chunks[chunk_idx].embedding)
-                                   for m in accum_msgs], axis=1)
-        elif msg_type == 'index':
+        if msg_type == 'index':
             return np.concatenate([blob2array(m.request.index.docs[doc_idx].chunks[chunk_idx].embedding)
                                    for m in accum_msgs], axis=1)
+        elif msg_type == 'query':
+            return np.concatenate([blob2array(m.request.search.query.chunks[chunk_idx].embedding)
+                                   for m in accum_msgs], axis=1)
         else:
-            self.logger.error('dont know how to handle %s' % msg_type)
+            self.logger.error(f'dont know how to handle {msg_type}')
 
 
 class AvgEmbedRouter(BaseEmbedReduceRouter):
@@ -104,11 +108,11 @@ class AvgEmbedRouter(BaseEmbedReduceRouter):
     """
 
     def reduce_embedding(self, accum_msgs: List['gnes_pb2.Message'], msg_type: str, chunk_idx: int, doc_idx: int):
-        if msg_type == 'query':
-            return np.mean([blob2array(m.request.search.query.chunks[chunk_idx].embedding)
-                                   for m in accum_msgs], axis=0)
-        elif msg_type == 'index':
+        if msg_type == 'index':
             return np.mean([blob2array(m.request.index.docs[doc_idx].chunks[chunk_idx].embedding)
                                    for m in accum_msgs], axis=0)
+        elif msg_type == 'query':
+            return np.mean([blob2array(m.request.search.query.chunks[chunk_idx].embedding)
+                                   for m in accum_msgs], axis=0)
         else:
-            self.logger.error('dont know how to handle %s' % msg_type)
+            self.logger.error(f'dont know how to handle {msg_type}')

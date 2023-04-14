@@ -35,12 +35,12 @@ class PyTorchTransformers(BaseTextEncoder):
 
     def post_init(self):
         from pytorch_transformers import BertModel, BertTokenizer, \
-            OpenAIGPTModel, OpenAIGPTTokenizer, GPT2Model, GPT2Tokenizer, \
-            TransfoXLModel, TransfoXLTokenizer, XLNetModel, XLNetTokenizer, \
-            XLMModel, XLMTokenizer, RobertaModel, RobertaTokenizer
+                OpenAIGPTModel, OpenAIGPTTokenizer, GPT2Model, GPT2Tokenizer, \
+                TransfoXLModel, TransfoXLTokenizer, XLNetModel, XLNetTokenizer, \
+                XLMModel, XLMTokenizer, RobertaModel, RobertaTokenizer
         # select the model, tokenizer & weight accordingly
         model_class, tokenizer_class, pretrained_weights = \
-            {k[-1]: k for k in
+                {k[-1]: k for k in
              [(BertModel, BertTokenizer, 'bert-base-uncased'),
               (OpenAIGPTModel, OpenAIGPTTokenizer, 'openai-gpt'),
               (GPT2Model, GPT2Tokenizer, 'gpt2'),
@@ -55,7 +55,9 @@ class PyTorchTransformers(BaseTextEncoder):
         try:
             self.model, self.tokenizer = load_model_tokenizer(self.work_dir)
         except Exception:
-            self.logger.warning('cannot deserialize model/tokenizer from %s, will download from web' % self.work_dir)
+            self.logger.warning(
+                f'cannot deserialize model/tokenizer from {self.work_dir}, will download from web'
+            )
             self.model, self.tokenizer = load_model_tokenizer(pretrained_weights)
 
     @batching

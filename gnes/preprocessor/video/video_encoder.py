@@ -26,7 +26,7 @@ class VideoEncoderPreprocessor(BaseVideoPreprocessor):
         self.video_format = video_format
 
         if self.video_format not in ['mp4', 'gif']:
-            raise ValueError("%s encoder has not been supported!" % (self.video_format))
+            raise ValueError(f"{self.video_format} encoder has not been supported!")
 
 
     def _encode(self, images: 'np.ndarray'):

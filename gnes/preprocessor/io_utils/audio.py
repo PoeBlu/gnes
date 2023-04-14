@@ -91,8 +91,7 @@ def get_chunk_times(input_fn: str = 'pipe:',
         input_kwargs['t'] = end_time - start_time
 
     au_filters = [
-        'silencedetect=noise={}dB:d={}'.format(silence_threshold,
-                                               silence_duration)
+        f'silencedetect=noise={silence_threshold}dB:d={silence_duration}'
     ]
 
     output_kwargs = {'format': 'null'}
@@ -115,19 +114,19 @@ def get_chunk_times(input_fn: str = 'pipe:',
         silence_end_match = silence_end_re.search(line)
         total_duration_match = total_duration_re.search(line)
         if silence_start_match:
-            chunk_ends.append(float(silence_start_match.group('start')))
-            if len(chunk_starts) == 0:
+            chunk_ends.append(float(silence_start_match['start']))
+            if not chunk_starts:
                 # Started with non-silence.
                 chunk_starts.append(start_time)
         elif silence_end_match:
-            chunk_starts.append(float(silence_end_match.group('end')))
+            chunk_starts.append(float(silence_end_match['end']))
         elif total_duration_match:
-            hours = int(total_duration_match.group('hours'))
-            minutes = int(total_duration_match.group('minutes'))
-            seconds = float(total_duration_match.group('seconds'))
+            hours = int(total_duration_match['hours'])
+            minutes = int(total_duration_match['minutes'])
+            seconds = float(total_duration_match['seconds'])
             end_time = hours * 3600 + minutes * 60 + seconds
 
-    if len(chunk_starts) == 0:
+    if not chunk_starts:
         # No silence found.
         chunk_starts.append(start_time)
 
@@ -154,7 +153,7 @@ def split_audio(input_fn: str = 'pipe:',
         silence_duration=silence_duration,
         start_time=start_time,
         end_time=end_time)
-    audio_chunks = list()
+    audio_chunks = []
     # print("chunk_times", chunk_times)
     for i, (start_time, end_time) in enumerate(chunk_times):
         time = end_time - start_time

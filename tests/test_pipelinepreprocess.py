@@ -19,8 +19,8 @@ class TestPartition(unittest.TestCase):
     def setUp(self):
         self.dirname = os.path.dirname(__file__)
         self.p3_name = 'pipe-p12'
-        self.yml_dump_path = os.path.join(self.dirname, '%s.yml' % self.p3_name)
-        self.bin_dump_path = os.path.join(self.dirname, '%s.bin' % self.p3_name)
+        self.yml_dump_path = os.path.join(self.dirname, f'{self.p3_name}.yml')
+        self.bin_dump_path = os.path.join(self.dirname, f'{self.p3_name}.bin')
 
     def tearDown(self):
         if os.path.exists(self.yml_dump_path):

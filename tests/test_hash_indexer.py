@@ -32,7 +32,7 @@ class TestMHIndexer(unittest.TestCase):
         m.add(self.test_label, self.test_data, self.weights)
         res = m.query(self.query, 1)
         self.assertEqual(len(res), self.n)
-        s = sum([1 for i in range(self.n) if i in [_[0][0] for _ in res[i]]])
+        s = sum(i in [_[0][0] for _ in res[i]] for i in range(self.n))
         self.assertEqual(s, self.n)
         m.close()
 
@@ -44,5 +44,5 @@ class TestMHIndexer(unittest.TestCase):
         self.assertTrue(os.path.exists(self.dump_path))
         m2 = HBIndexer.load(self.dump_path)
         res = m2.query(self.query, 1)
-        s = sum([1 for i in range(self.n) if i in [_[0][0] for _ in res[i]]])
+        s = sum(i in [_[0][0] for _ in res[i]] for i in range(self.n))
         self.assertEqual(s, self.n)

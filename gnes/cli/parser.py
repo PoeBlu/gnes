@@ -29,7 +29,7 @@ class ActionNoYes(argparse.Action):
             raise ValueError('yes/no arguments must be prefixed with --')
 
         opt = opt[2:]
-        opts = ['--' + opt, '--no-' + opt, '--no_' + opt]
+        opts = [f'--{opt}', f'--no-{opt}', f'--no_{opt}']
         super(ActionNoYes, self).__init__(opts, dest, nargs=0, const=None,
                                           default=default, required=required, help=help)
 
@@ -43,7 +43,7 @@ class ActionNoYes(argparse.Action):
 def resolve_py_path(path):
     import os
     if not os.path.exists(path):
-        raise argparse.ArgumentTypeError('%s is not a valid file path' % path)
+        raise argparse.ArgumentTypeError(f'{path} is not a valid file path')
     return path
 
 
@@ -72,14 +72,24 @@ def set_base_parser():
     from termcolor import colored
     # create the top-level parser
     parser = argparse.ArgumentParser(
-        description='%s, a cloud-native semantic search system '
-                    'based on deep neural network. '
-                    'It enables large-scale index and semantic search for text-to-text, image-to-image, '
-                    'video-to-video and any content form. Visit %s for tutorials and documentations.' % (
-                        colored('GNES v%s: Generic Neural Elastic Search' % __version__, 'green'),
-                        colored('https://gnes.ai', 'cyan', attrs=['underline'])),
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + __version__)
+        description=(
+            '%s, a cloud-native semantic search system '
+            'based on deep neural network. '
+            'It enables large-scale index and semantic search for text-to-text, image-to-image, '
+            'video-to-video and any content form. Visit %s for tutorials and documentations.'
+            % (
+                colored(
+                    f'GNES v{__version__}: Generic Neural Elastic Search',
+                    'green',
+                ),
+                colored('https://gnes.ai', 'cyan', attrs=['underline']),
+            )
+        ),
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument(
+        '-v', '--version', action='version', version=f'%(prog)s {__version__}'
+    )
     parser.add_argument('--verbose', action='store_true', default=False,
                         help='turn on detailed logging for debug')
     return parser

@@ -82,8 +82,9 @@ class SnowflakeIDGenerator(object):
                     'the current timestamp is smaller than the last timestamp')
 
             self.last_timestamp = timestamp
-            uuid = ((timestamp - self.twepoch) << self.timestamp_shift) \
-                    | (self.datacenter_id << self.datacenter_shift) \
-                    | (self.machine_id << self.machine_shift) \
-                    | self._next_id
-            return uuid
+            return (
+                ((timestamp - self.twepoch) << self.timestamp_shift)
+                | (self.datacenter_id << self.datacenter_shift)
+                | (self.machine_id << self.machine_shift)
+                | self._next_id
+            )

@@ -40,10 +40,14 @@ class VggishEncoder(BaseAudioEncoder):
         with tf.Graph().as_default():
             self._sess = tf.Session()
             vggish_slim.define_vggish_slim(training=False)
-            vggish_slim.load_vggish_slim_checkpoint(self._sess, self.model_dir + "/vggish_model.ckpt")
+            vggish_slim.load_vggish_slim_checkpoint(
+                self._sess, f"{self.model_dir}/vggish_model.ckpt"
+            )
             self._audio_inputs = self._sess.graph.get_tensor_by_name(vggish_params.INPUT_TENSOR_NAME)
             self._embedding = self._sess.graph.get_tensor_by_name(vggish_params.OUTPUT_TENSOR_NAME)
-        self._pproc = vggish_postprocess.Postprocessor(self.model_dir + "/vggish_pca_params.npz")
+        self._pproc = vggish_postprocess.Postprocessor(
+            f"{self.model_dir}/vggish_pca_params.npz"
+        )
 
 
     @batching
@@ -54,7 +58,7 @@ class VggishEncoder(BaseAudioEncoder):
             audio_length[i] = audio_length[i] + audio_length[i - 1]
 
         # concat at axis = 0 to make sure the dimension is: (#vggish_example, D)
-        audio_ = np.concatenate((list(audio[i] for i in range(len(audio)))), axis=0)
+        audio_ = np.concatenate([audio[i] for i in range(len(audio))], axis=0)
 
         [embedding_batch] = self._sess.run([self._embedding], feed_dict={self._audio_inputs: audio_})
         postprocessed_batch = self._pproc.postprocess(embedding_batch)
